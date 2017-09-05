@@ -1,0 +1,80 @@
+'CapaInstaller OSD Deployment Script for PreDiskPartScript
+' Your code goes here
+
+Dim giMessageBoxMode : giMessageBoxMode=2  '0=No Message ,1=Message, 2=Popup
+Dim giMessageBoxTimeOut : giMessageBoxTimeOut=10  'Timeout secunds
+
+
+Function Custom_Driver_GetOSDModelName()
+    Dim bStatus
+    bStatus=True
+    gsValue=""
+    Call Job_WriteLog("Custom_Driver_GetOSDModelName","Translating Model Name to CapaInstaller Model Name",True,True)
+    If bStatus Then bStatus=Ini_GetAllSections(gsDriverMappingsFile,";",True,False)
+    aIniSection=gaValue
+    For Each sIniSection in aIniSection
+        aValue=Split(sIniSection,"|")
+        For Each sModel In aValue
+            sModel=Replace(sModel,"*","")
+            If InStr(gsModelName,sModel)>0 Then
+                If bStatus Then bStatus=Ini_GetAllSectionVariables(gsDriverMappingsFile,sIniSection,";",True,True)
+                aIniVariables=gaValue
+                For Each sIniVariable in aIniVariables
+                    If bStatus Then bStatus=Ini_ReadEntry(gsDriverMappingsFile,sIniSection,sIniVariable,True)
+                    sDriverPath=gsValue
+                    If sDriverPath<>"" Then
+                        sDriverModelName=Left(sDriverPath,InStr(sDriverPath,"\")-1)                        
+                        Exit For
+                    End If
+                Next
+            End If
+        Next
+    Next
+    If sDriverModelName="" Then sDriverModelName="Unknown Model"
+    gsValue=sDriverModelName
+    Call Job_WriteLog("Custom_Driver_GetOSDModelName","CapaInstaller Model Name Found '" & sDriverModelName & "'",True,True)
+    Custom_Driver_GetOSDModelName=bStatus
+End Function
+
+Function Custom_Message(sText,sTitle,sButtons )
+	Dim bStatus
+	bStatus=True
+	If bStatus Then bStatus=Job_WriteLog("Custom_Message","Custom_Message: " & """" & vbNewLine & "MessageboxMode=" & CSTR(giMessageBoxMode),bStatus,False)
+	Select Case giMessageBoxMode
+		Case 0 'do nothing
+		Case 1  Call MsgBox(sText, sButtons, sTitle)
+		Case 2  Call oShell.Popup(sText & vbNewLine & vbNewLine & "Messagebox will automatically close in " & giMessageBoxTimeOut & " second(s).", giMessageBoxTimeOut, sTitle, sButtons)
+	End Select
+	Custom_Message=bStatus
+End Function
+
+Function Custom_Driver_GetOSDModelName()
+    Dim bStatus
+    bStatus=True
+    gsValue=""
+    Call Job_WriteLog("Custom_Driver_GetOSDModelName","Translating Model Name to CapaInstaller Model Name",True,True)
+    If bStatus Then bStatus=Ini_GetAllSections(gsDriverMappingsFile,";",True,False)
+    aIniSection=gaValue
+    For Each sIniSection in aIniSection
+        aValue=Split(sIniSection,"|")
+        For Each sModel In aValue
+            sModel=Replace(sModel,"*","")
+            If InStr(gsModelName,sModel)>0 Then
+                If bStatus Then bStatus=Ini_GetAllSectionVariables(gsDriverMappingsFile,sIniSection,";",True,True)
+                aIniVariables=gaValue
+                For Each sIniVariable in aIniVariables
+                    If bStatus Then bStatus=Ini_ReadEntry(gsDriverMappingsFile,sIniSection,sIniVariable,True)
+                    sDriverPath=gsValue
+                    If sDriverPath<>"" Then
+                        sDriverModelName=Left(sDriverPath,InStr(sDriverPath,"\")-1)                        
+                        Exit For
+                    End If
+                Next
+            End If
+        Next
+    Next
+    If sDriverModelName="" Then sDriverModelName="Unknown Model"
+    gsValue=sDriverModelName
+    Call Job_WriteLog("Custom_Driver_GetOSDModelName","CapaInstaller Model Name Found '" & sDriverModelName & "'",True,True)
+    Custom_Driver_GetOSDModelName=bStatus
+End Function

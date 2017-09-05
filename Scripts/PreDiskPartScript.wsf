@@ -1,0 +1,82 @@
+
+<job>
+ <script language="VBScript">
+ 
+Private Function IncludeScript(sScriptFile)
+	Dim oFso
+	Dim sCmd
+	Dim sClientDir
+	Dim oLocalShell
+	'Begin	
+	bStatus=True
+	On Error Resume Next
+	Set oLocalShell=CreateObject("WScript.Shell")
+	sClientDir=oLocalShell.RegRead("HKLM\Software\CapaSystems\CapaInstaller\Client Directory")
+	If bStatus and (sClientDir<>"") Then
+		Set oLocalFSO = CreateObject("Scripting.FileSystemObject")
+		sCmd = oLocalFSO.OpenTextFile(sClientDir & "\Lib\" & sScriptFile,1).ReadAll
+	Else
+		bStatus=False
+  End If
+	
+	ExecuteGlobal sCmd
+	IncludeScript=bStatus
+End Function
+
+
+
+Function Custom()
+	On error resume next
+	Dim bStatus
+	'Begin
+	bStatus=True	
+    If bStatus Then bStatus=Reg_SetString("HKLM","Software\CapaSystems\CapaInstaller","PackageRoot","S:")
+
+    If bStatus Then bStatus=Custom_Driver_GetOSDModelName()    
+    If bStatus Then sDriverModelName=gsValue
+    If sDriverModelName="" Then 
+        Call Custom_Message("Drivers for '" & gsModelName & "' not found in '" & gsDriverMappingsFile & "'." & vbNewLine & vbNewLine & "Click 'OK' to continue the installation.","Installation Information",vbOKOnly + vbInformation)
+    End If
+   	If bStatus Then bStatus=OSD_UpdateCustomMessage("Running WinPE Inventory...")
+
+    If bStatus Then bStatus=CMS_SubmitWinPEInventory()	
+    If bStatus Then bStatus=OSD_UpdateCustomMessage("Adding Computer to standard Groups...")  
+	If bStatus Then bStatus=CDM_AddComputerToStaticGroup(gsUUID, "Building")
+	If bStatus Then bStatus=CDM_AddComputerToStaticGroup(gsUUID, gsImageOSType & " - " & gsModelName)
+	If bStatus Then bStatus=CDM_AddComputerToStaticGroup(gsUUID, gsImageOSType)
+	If bStatus Then bStatus=CDM_AddComputerToStaticGroup(gsUUID, gsImageOSType & " - " & gsPCType)
+	If bStatus Then bStatus=CDM_AddComputerToStaticGroup(gsUUID, gsPCType)
+	If bStatus Then bStatus=CDM_AddComputerToStaticGroup(gsUUID, "OSD Model - " & gsImageOSType & " - " & sDriverModelName)
+	
+    If bStatus Then bStatus=CMS_AddComputerToStaticGroup(gsUUID, "Building")
+	If bStatus Then bStatus=CMS_AddComputerToStaticGroup(gsUUID, gsImageOSType & " - " & gsModelName)
+	If bStatus Then bStatus=CMS_AddComputerToStaticGroup(gsUUID, gsImageOSType)
+	If bStatus Then bStatus=CMS_AddComputerToStaticGroup(gsUUID, gsImageOSType & " - " & gsPCType)
+	If bStatus Then bStatus=CMS_AddComputerToStaticGroup(gsUUID, gsPCType)
+	If bStatus Then bStatus=CMS_AddComputerToStaticGroup(gsUUID, "OSD Model - " & gsImageOSType & " - " & sDriverModelName)
+	Custom=bStatus
+End Function
+
+ 
+ 'Begin
+  bStatus=True
+  If bStatus Then bStatus=IncludeScript("customlib.cis")
+  If bStatus Then bStatus=IncludeScript("OSDCustomlib.cis") 
+  If bStatus Then bStatus=IncludeLibrary("Capalib.cin")
+  If bStatus Then bStatus=IncludeLibrary("Osdlib.cin")
+  If bStatus Then bStatus=Job_Start("WS","Script Name","1.0","ScriptName.log","INSTALL")
+  If bStatus Then bStatus=OSD_Initialize()
+  If bStatus Then bStatus=Reg_SetString("HKLM","Software\CapaSystems\CapaInstaller","PackageRoot","s:")
+
+  'Place your own code here
+  On Error Resume Next
+  If bStatus and gsManagementPoint <> "" Then bStatus=CMS_SubmitWinPEInventory()
+  If bStatus Then bStatus=Custom()
+  
+
+  Job_End(bStatus)
+'End main
+
+
+	</script>
+</job>

@@ -1,0 +1,73 @@
+'CapaInstaller OSD Deployment Script for PreGUIScript
+<job id=PreGUIScript>
+	<script language="vbscript">
+
+		'Global script Declarations
+	
+'*****  Library Declarations  *************************************************************************************
+Const ForReading = 1
+
+Dim bStatus
+
+
+	
+Private Function IncludeScript(sScriptFile)
+	Dim oFso
+	Dim sCmd
+	Dim sClientDir
+	Dim oLocalShell
+	'Begin	
+	bStatus=True
+	On Error Resume Next
+	Set oLocalShell=CreateObject("WScript.Shell")
+	sClientDir=oLocalShell.RegRead("HKLM\Software\CapaSystems\CapaInstaller\Client Directory")
+	If bStatus and (sClientDir<>"") Then
+		Set oLocalFSO = CreateObject("Scripting.FileSystemObject")
+		sCmd = oLocalFSO.OpenTextFile(sClientDir & "\Lib\" & sScriptFile,1).ReadAll
+	Else
+		bStatus=False
+  End If
+	
+	ExecuteGlobal sCmd
+	IncludeScript=bStatus
+End Function
+
+
+Function Custom() 
+	Dim bStatus
+	'Begin
+	bStatus=True
+    If bStatus Then bStatus=File_ExistDir("x:\program files\vnc",False)
+    If bStatus And gbValue Then 
+        If bStatus Then bStatus=Shell_Execute("wpeutil.exe","DisableFirewall",True,0,False)
+        If bStatus Then bStatus=Shell_Execute("x:\program files\vnc\winvnc.exe","",False,0,True)
+        If bStatus Then bStatus=Reg_GetString("HKLM","SOFTWARE\CapaSystems\CapaInstaller\OSD","IPAddress",False)
+        gsIPAddress=gsValue	
+        If bStatus Then bStatus=File_CreateDirectory("Z:\Logs\VNC")
+        If bStatus Then bStatus=Ini_WriteEntry("z:\logs\vnc\lastconnection.ini","Data","Connection",gsIPAddress)
+    End If
+	Custom=bStatus
+End Function
+
+
+'Begin main
+  bStatus=True
+  
+  If bStatus Then bStatus=IncludeScript("customlib.cis")
+  If bStatus Then bStatus=IncludeLibrary("capalib.cin")
+  If bStatus Then bStatus=Job_SetPlatform("CDM")
+  If bStatus Then bStatus=Job_Start("WS","Preboot Script","Rv5.0","PreGuiScript.Log","INSTALL")
+  If bStatus Then bStatus=Job_SilentInstallation()
+  If bStatus Then bStatus=Job_SetLanguage("OS")
+  If bStatus Then bStatus=Job_SetMasterLog("Advanced")
+  If bStatus Then bStatus=CDM_DefineEndUserCancellation(9999,99991231,"NEVER")
+  If bStatus Then gbSuficientDiskSpace=True
+  If bStatus Then bStatus=Job_SetStartTime()
+  If bStatus Then bStatus=Job_InstallationStart("PreGuiScript","5",10,2)
+  If bStatus Then bStatus=Custom()
+  bStatus=Job_InstallationCompleted("Preboot Script",bStatus)
+  Job_End(bStatus)
+'End Main 
+
+	</script>
+</job>
