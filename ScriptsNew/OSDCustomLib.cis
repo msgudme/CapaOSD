@@ -423,6 +423,7 @@ End Function
 
 		Dim bStatus:bStatus=True
 
+
 		Call Job_WriteLog("Inventar_GetADLdapPath","Inventar_GetADLdapPath: Inventory Location Number='" & sLocation & "'",bStatus,True)
 		sKeyPath=""
 		sParent = ""			' Parent(s)
