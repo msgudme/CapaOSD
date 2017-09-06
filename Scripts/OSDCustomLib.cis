@@ -23,7 +23,7 @@ Function Custom_Driver_GetOSDModelName()
                     If bStatus Then bStatus=Ini_ReadEntry(gsDriverMappingsFile,sIniSection,sIniVariable,True)
                     sDriverPath=gsValue
                     If sDriverPath<>"" Then
-                        sDriverModelName=Left(sDriverPath,InStr(sDriverPath,"\")-1)                        
+                        sDriverModelName=Left(sDriverPath,InStr(sDriverPath,"\")-1)
                         Exit For
                     End If
                 Next
@@ -66,7 +66,7 @@ Function Custom_Driver_GetOSDModelName()
                     If bStatus Then bStatus=Ini_ReadEntry(gsDriverMappingsFile,sIniSection,sIniVariable,True)
                     sDriverPath=gsValue
                     If sDriverPath<>"" Then
-                        sDriverModelName=Left(sDriverPath,InStr(sDriverPath,"\")-1)                        
+                        sDriverModelName=Left(sDriverPath,InStr(sDriverPath,"\")-1)
                         Exit For
                     End If
                 Next

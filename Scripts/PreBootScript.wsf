@@ -1,100 +1,97 @@
 
 <job>
- <script language="VBScript">
+<script language="VBScript">
 
- Dim gbCustomDebug:gbCustomDebug=False
- Dim goUnattendXml
- Dim gsLogServerFolder:gsLogServerFolder="Z:\Logs" 'set the log folder root
- Dim gsDestinationSysDrive:gsDestinationSysDrive=""
+Dim gbCustomDebug:gbCustomDebug=False
+Dim goUnattendXml
+Dim gsLogServerFolder:gsLogServerFolder="Z:\Logs" 'set the log folder root
+Dim gsDestinationSysDrive:gsDestinationSysDrive=""
 
 Private Function IncludeScript(sScriptFile)
-    Dim sCmd
-    Dim sClientDir
-    Dim sScriptDir
-    'Begin
-    bStatus=True
-    On Error Resume Next
-    Dim oLocalShell : Set oLocalShell=CreateObject("WScript.Shell")
-    Dim oLocalFso : Set oLocalFso = CreateObject("Scripting.FileSystemObject")
-    sScriptDir = Mid(WScript.ScriptFullName,1,Len(WScript.ScriptFullName)-Len(WScript.ScriptName)-1)
-    sClientDir=oLocalShell.RegRead("HKLM\Software\CapaSystems\CapaInstaller\Client Directory")
-    If bStatus and (sClientDir<>"") Then
-        If oLocalFso.FileExists(sClientDir & "\Lib\" & sScriptFile) Then
-            sCmd = oLocalFSO.OpenTextFile(sClientDir & "\Lib\" & sScriptFile,1).ReadAll
-        ElseIf oLocalFso.FileExists(sScriptDir & "\" & sScriptFile) Then
-            sCmd = oLocalFSO.OpenTextFile(sScriptDir & "\" & sScriptFile,1).ReadAll
-        End If
-    Else
-        bStatus=False
-    End If
+	Dim sCmd
+	Dim sClientDir
+	Dim sScriptDir
+	'Begin
+	bStatus=True
+	On Error Resume Next
+	Dim oLocalShell : Set oLocalShell=CreateObject("WScript.Shell")
+	Dim oLocalFso : Set oLocalFso = CreateObject("Scripting.FileSystemObject")
+	sScriptDir = Mid(WScript.ScriptFullName,1,Len(WScript.ScriptFullName)-Len(WScript.ScriptName)-1)
+	sClientDir=oLocalShell.RegRead("HKLM\Software\CapaSystems\CapaInstaller\Client Directory")
+	If bStatus and (sClientDir<>"") Then
+			If oLocalFso.FileExists(sClientDir & "\Lib\" & sScriptFile) Then
+					sCmd = oLocalFSO.OpenTextFile(sClientDir & "\Lib\" & sScriptFile,1).ReadAll
+			ElseIf oLocalFso.FileExists(sScriptDir & "\" & sScriptFile) Then
+					sCmd = oLocalFSO.OpenTextFile(sScriptDir & "\" & sScriptFile,1).ReadAll
+			End If
+	Else
+			bStatus=False
+	End If
 
-    ExecuteGlobal sCmd
-    IncludeScript=bStatus
+	ExecuteGlobal sCmd
+	IncludeScript=bStatus
 End Function
 
 
+Function OSD_EnableInstallScreen()
+	Dim bStatus, sFunction
+	bStatus=True
+	sFunction = "OSD_EnableInstallScreen"
 
- Function OSD_EnableInstallScreen()
-Dim bStatus, sFunction
-bStatus=True
-sFunction = "OSD_EnableInstallScreen"
-
-If bStatus Then bStatus=Reg_GetString("HKLM","Software\CapaSystems\CapaInstaller\OSD","DeployToDrive",True)
-sDeployDrive = gsValue
-sInstallScreenPath= sDeployDrive & "Windows\CIINST"
-sInstallScreenLauncher = sInstallScreenPath & "\StartInstallScreen.vbs"
+	If bStatus Then bStatus=Reg_GetString("HKLM","Software\CapaSystems\CapaInstaller\OSD","DeployToDrive",True)
+	sDeployDrive = gsValue
+	sInstallScreenPath= sDeployDrive & "Windows\CIINST"
+	sInstallScreenLauncher = sInstallScreenPath & "\StartInstallScreen.vbs"
 
 
 	Select Case(gsOSSystem)
 		Case "VISTA","WIN7","WIN8","WIN81","WIN10","2008R2"
-            If bStatus Then bStatus=OSD_EnableMiniSetupInstallScreen(sInstallScreenPath,sInstallScreenLauncher)
-            If bStatus Then bStatus=OSD_EnableWinlogonInstallScreen(sInstallScreenPath,sDeployDrive)
+						If bStatus Then bStatus=OSD_EnableMiniSetupInstallScreen(sInstallScreenPath,sInstallScreenLauncher)
+						If bStatus Then bStatus=OSD_EnableWinlogonInstallScreen(sInstallScreenPath,sDeployDrive)
 		Case "XP","2000","2003"
-            If bStatus Then bStatus=OSD_EnableWinlogonInstallScreen(sInstallScreenPath,sDeployDrive)
+						If bStatus Then bStatus=OSD_EnableWinlogonInstallScreen(sInstallScreenPath,sDeployDrive)
 		Case Else
 		'Unknown OS
 	End Select
-
-OSD_EnableInstallScreen=bStatus
+	OSD_EnableInstallScreen=bStatus
 End Function
 
 
 Function OSD_EnableMiniSetupInstallScreen(sInstallScreenPath,sInstallScreenLauncher)
-Dim bStatus, sFunction
-bStatus=True
-sFunction = "OSD_EnableMiniSetupInstallScreen"
+	Dim bStatus, sFunction
+	bStatus=True
+	sFunction = "OSD_EnableMiniSetupInstallScreen"
 
-If bStatus Then bStatus=File_ExistDir(sInstallScreenPath,False)
-If bStatus and gbValue Then
-        sScriptContent = ""
-        sScriptContent = sScriptContent & "Dim WshShell, fso, sInstallScreenPath, bRelaunch" & vbCrLf
-        sScriptContent = sScriptContent & "bRelaunch = False" & vbCrLf
-        sScriptContent = sScriptContent & "Set WshShell = WScript.CreateObject(""WScript.Shell"")" & vbCrLf
-        sScriptContent = sScriptContent & "Set fso = CreateObject(""Scripting.FileSystemObject"")" & vbCrLf
-        sScriptContent = sScriptContent & "sInstallScreenPath=""" & sInstallScreenPath & """" & vbCrLf
-        sScriptContent = sScriptContent & "If fso.FileExists(sInstallScreenPath & ""\InstallationScreen.exe"") = False Then" & vbCrLf
-        sScriptContent = sScriptContent & "   wscript.echo ""ERROR: Could not find InstallationScreen.exe""" & vbCrLf
-        sScriptContent = sScriptContent & "Else" & vbCrLf
-        sScriptContent = sScriptContent & "   WshShell.RegWrite ""HKLM\Software\CapaSystems\CapaInstaller\ciNotify\FinalReboot"", 0 ,""REG_DWORD""" & vbCrLf
-        sScriptContent = sScriptContent & "   WshShell.RegWrite ""HKLM\Software\CapaSystems\CapaInstaller\ciNotify\NotifyEnabled"", 1 ,""REG_DWORD""" & vbCrLf
-        sScriptContent = sScriptContent & "   WshShell.RegWrite ""HKLM\Software\CapaSystems\CapaInstaller\OSD\StandardInstallation"", ""False"" ,""REG_SZ""" & vbCrLf    ' with this enabled, all Region Midt specifc code is disabled
-        sScriptContent = sScriptContent & "   If WshShell.RegRead(""HKLM\System\Setup\SystemSetupInProgress"") = 1 Then bRelaunch = True" & vbCrLf
-        sScriptContent = sScriptContent & "   If bRelaunch then WshShell.Run ""C:\Windows\CIINST\paexec.exe -i -d "" & sInstallScreenPath & ""\InstallationScreen.exe"", 0, False" & vbCrLf
-'        sScriptContent = sScriptContent & "   If bRelaunch = False then WshShell.Run ""C:\Windows\CIINST\paexec.exe -i -d "" & sInstallScreenPath & ""\InstallationScreen.exe"", 0, False" & vbCrLf
-        sScriptContent = sScriptContent & "End If" & vbCrLf
-        sScriptContent = sScriptContent & "WScript.Sleep 1000" & vbCrLf
-        sScriptContent = sScriptContent & "WshShell.Run ""%WINDIR%\System32\oobe\windeploy.exe"", 0, True" & vbCrLf
-        sScriptContent = sScriptContent & "If bRelaunch Then WshShell.RegWrite ""HKLM\System\Setup\CmdLine"" , ""wscript //nologo //B " & sInstallScreenLauncher & """ , ""REG_SZ""" & vbCrLf
-        sScriptContent = sScriptContent & "If bRelaunch = False Then WshShell.RegWrite ""HKLM\System\Setup\CmdLine"" , ""wscript //nologo //B " & sInstallScreenLauncher & """ , ""REG_SZ""" & vbCrLf
+	If bStatus Then bStatus=File_ExistDir(sInstallScreenPath,False)
+	If bStatus and gbValue Then
+			sScriptContent = ""
+			sScriptContent = sScriptContent & "Dim WshShell, fso, sInstallScreenPath, bRelaunch" & vbCrLf
+			sScriptContent = sScriptContent & "bRelaunch = False" & vbCrLf
+			sScriptContent = sScriptContent & "Set WshShell = WScript.CreateObject(""WScript.Shell"")" & vbCrLf
+			sScriptContent = sScriptContent & "Set fso = CreateObject(""Scripting.FileSystemObject"")" & vbCrLf
+			sScriptContent = sScriptContent & "sInstallScreenPath=""" & sInstallScreenPath & """" & vbCrLf
+			sScriptContent = sScriptContent & "If fso.FileExists(sInstallScreenPath & ""\InstallationScreen.exe"") = False Then" & vbCrLf
+			sScriptContent = sScriptContent & "   wscript.echo ""ERROR: Could not find InstallationScreen.exe""" & vbCrLf
+			sScriptContent = sScriptContent & "Else" & vbCrLf
+			sScriptContent = sScriptContent & "   WshShell.RegWrite ""HKLM\Software\CapaSystems\CapaInstaller\ciNotify\FinalReboot"", 0 ,""REG_DWORD""" & vbCrLf
+			sScriptContent = sScriptContent & "   WshShell.RegWrite ""HKLM\Software\CapaSystems\CapaInstaller\ciNotify\NotifyEnabled"", 1 ,""REG_DWORD""" & vbCrLf
+			sScriptContent = sScriptContent & "   WshShell.RegWrite ""HKLM\Software\CapaSystems\CapaInstaller\OSD\StandardInstallation"", ""False"" ,""REG_SZ""" & vbCrLf    ' with this enabled, all Region Midt specifc code is disabled
+			sScriptContent = sScriptContent & "   If WshShell.RegRead(""HKLM\System\Setup\SystemSetupInProgress"") = 1 Then bRelaunch = True" & vbCrLf
+			sScriptContent = sScriptContent & "   If bRelaunch then WshShell.Run ""C:\Windows\CIINST\paexec.exe -i -d "" & sInstallScreenPath & ""\InstallationScreen.exe"", 0, False" & vbCrLf
+		 'sScriptContent = sScriptContent & "   If bRelaunch = False then WshShell.Run ""C:\Windows\CIINST\paexec.exe -i -d "" & sInstallScreenPath & ""\InstallationScreen.exe"", 0, False" & vbCrLf
+			sScriptContent = sScriptContent & "End If" & vbCrLf
+			sScriptContent = sScriptContent & "WScript.Sleep 1000" & vbCrLf
+			sScriptContent = sScriptContent & "WshShell.Run ""%WINDIR%\System32\oobe\windeploy.exe"", 0, True" & vbCrLf
+			sScriptContent = sScriptContent & "If bRelaunch Then WshShell.RegWrite ""HKLM\System\Setup\CmdLine"" , ""wscript //nologo //B " & sInstallScreenLauncher & """ , ""REG_SZ""" & vbCrLf
+			sScriptContent = sScriptContent & "If bRelaunch = False Then WshShell.RegWrite ""HKLM\System\Setup\CmdLine"" , ""wscript //nologo //B " & sInstallScreenLauncher & """ , ""REG_SZ""" & vbCrLf
 
+			If bStatus Then bStatus=File_CreateEmptyFile(sInstallScreenLauncher,False)
+			If bStatus Then bStatus=File_InsertInFile(sInstallScreenLauncher,"",sScriptContent,True,True,"TOP")
+			If bStatus Then bStatus=Reg_LoadHive(gsREGTempHive,gsREGFile)
+			If bStatus Then bStatus=Reg_SetString("HKLM","TempHive\Setup","CmdLine","wscript.exe //B //nologo " & sInstallScreenLauncher)
 
-    If bStatus Then bStatus=File_CreateEmptyFile(sInstallScreenLauncher,False)
-    If bStatus Then bStatus=File_InsertInFile(sInstallScreenLauncher,"",sScriptContent,True,True,"TOP")
-    If bStatus Then bStatus=Reg_LoadHive(gsREGTempHive,gsREGFile)
-    If bStatus Then bStatus=Reg_SetString("HKLM","TempHive\Setup","CmdLine","wscript.exe //B //nologo " & sInstallScreenLauncher)
-
-    Call Reg_UnLoadHive(gsREGTempHive)
-End if
+			Call Reg_UnLoadHive(gsREGTempHive)
+			End if
 
 OSD_EnableMiniSetupInstallScreen=bStatus
 End Function
@@ -105,353 +102,352 @@ Dim bStatus, sFunction
 sFunction = "OSD_EnableWinlogonInstallScreen"
 bStatus=True
 
-    If bStatus and sSuppressMessageBoxesDurringInitialInstall Then
-        If bStatus Then bStatus=Reg_GetString("HKLM","SOFTWARE\CapaSystems\CapaInstaller\OSD","DeployToDrive",False)
-        If bStatus and gbValue Then
-            sDeployToDrive = gsValue
-            If bStatus Then bStatus=File_CreateDirectory(sDeployToDrive & "Program Files\CapaInstaller\Client")
-            If bStatus Then bStatus=File_CreateEmptyFile(sDeployToDrive & "Program Files\CapaInstaller\Client\SilentInstall.dat" , False)
-        End If
-    End If
+	If bStatus and sSuppressMessageBoxesDurringInitialInstall Then
+			If bStatus Then bStatus=Reg_GetString("HKLM","SOFTWARE\CapaSystems\CapaInstaller\OSD","DeployToDrive",False)
+			If bStatus and gbValue Then
+					sDeployToDrive = gsValue
+					If bStatus Then bStatus=File_CreateDirectory(sDeployToDrive & "Program Files\CapaInstaller\Client")
+					If bStatus Then bStatus=File_CreateEmptyFile(sDeployToDrive & "Program Files\CapaInstaller\Client\SilentInstall.dat" , False)
+			End If
+	End If
 
-    If bStatus Then bStatus=Sysprep_AddRunCommand("Install Installation Screen Service", sDeployToDrive & "windows\System32\cmd.exe /c msiexec /i " & sInstallScreenPath & "\InstallService.msi /qn")
+	If bStatus Then bStatus=Sysprep_AddRunCommand("Install Installation Screen Service", sDeployToDrive & "windows\System32\cmd.exe /c msiexec /i " & sInstallScreenPath & "\InstallService.msi /qn")
 
 OSD_EnableWinlogonInstallScreen=bStatus
 End Function
 
 Function customDesktopChassiType(intCustomChassiType)
-	'# -------------------------------------------------------------------------------------------
-	'# Used for checking computerChassi to extend capainstaller builtin check.
-	'# //Tommy Sandvall
-	'# -------------------------------------------------------------------------------------------
+'# -------------------------------------------------------------------------------------------
+'# Used for checking computerChassi to extend capainstaller builtin check.
+'# -------------------------------------------------------------------------------------------
 
-	bStatus=False
-	Call Job_WriteLog("customDesktopChassiType","customDesktopChassiType: Function Start",True,True)
-	strComputer = "."
-	Set objWMIService = GetObject("winmgmts:" _
-	 & "{impersonationLevel=impersonate}!\\" & strComputer & "\root\cimv2")
-	Set colChassis = objWMIService.ExecQuery _
-	 ("SELECT * FROM Win32_SystemEnclosure")
-	For Each objChassis in colChassis
-	 For Each intType in objChassis.ChassisTypes
-		 If intType = intCustomChassiType then
-			'wscript.echo "customDesktopChassiType is ("& intType &"), handled as Desktop"
-			Call Job_WriteLog("customDesktopChassiType","customDesktopChassiType is ("& intType &"), handled as Desktop",True,True)
-			bStatus=True
-		 End If
+bStatus=False
+Call Job_WriteLog("customDesktopChassiType","customDesktopChassiType: Function Start",True,True)
+strComputer = "."
+Set objWMIService = GetObject("winmgmts:" _
+ & "{impersonationLevel=impersonate}!\\" & strComputer & "\root\cimv2")
+Set colChassis = objWMIService.ExecQuery _
+ ("SELECT * FROM Win32_SystemEnclosure")
+For Each objChassis in colChassis
+ For Each intType in objChassis.ChassisTypes
+	 If intType = intCustomChassiType then
+		'wscript.echo "customDesktopChassiType is ("& intType &"), handled as Desktop"
+		Call Job_WriteLog("customDesktopChassiType","customDesktopChassiType is ("& intType &"), handled as Desktop",True,True)
+		bStatus=True
+	 End If
 
-	 Next
-	Next
-	Call Job_WriteLog("customDesktopChassiType","customDesktopChassiType: Function Start",True,True)
+ Next
+Next
+Call Job_WriteLog("customDesktopChassiType","customDesktopChassiType: Function Start",True,True)
 
 customDesktopChassiType=bStatus
 End Function
 
 
 Function Custom_Sysprep_MachineObjectOU()
-	Dim bStatus, sFunction, sDestinationOU, sDomain
-    Dim bOUUseMachineType
-    bStatus=True
-    bOUUseMachineType=True 'add laptop / desktop to OU Destination
-    Call Job_WriteLog("Custom_Sysprep_MachineObjectOU","Custom_Sysprep_MachineObjectOU: Function Start",True,True)
-    If bStatus Then bStatus=Job_WriteLog("Custom_Sysprep_MachineObjectOU","Adding computer to the right OU. - " & gsPCType,bStatus,False)
-    sDomain = ",dc=GW,dc=whatever,dc=COM"
-    If UCASE(gsPCType)="STANDARD DK" Then
-        sDestinationOU="ou=Computers,ou=DK,ou=NORDICS,ou=whatever"
-    ElseIf UCASE(gsPCType)="STANDARD SE" Then
-        sDestinationOU="ou=Computers,ou=SE,ou=NORDICS,ou=whatever"
-    ElseIf UCASE(gsPCType)="STANDARD NO" Then
-        sDestinationOU="ou=Computers,ou=NO,ou=NORDICS,ou=whatever"
-    ElseIf UCASE(gsPCType)="STANDARD HQ STOCKHOLM" Then
-        sDestinationOU="ou=Stockholm,ou=Computers,ou=HQ,ou=whatever"
-	ElseIf UCASE(gsPCType)="STANDARD HQ SE" Then
-        sDestinationOU="ou=Stockholm,ou=Computers,ou=HQ,ou=whatever"
-    ElseIf UCASE(gsPCType)="STANDARD HQ AMSTERDAM" Then
-        sDestinationOU="ou=Amsterdam,ou=Computers,ou=HQ,ou=whatever"
-    ElseIf UCASE(gsPCType)="STANDARD HQ GOTHENBURG" Then
-        sDestinationOU="ou=Gothenburg,ou=Computers,ou=HQ,ou=whatever"
-    ElseIf UCASE(gsPCType)="STANDARD DE" Then
-        sDestinationOU="ou=Computers,ou=DE,ou=CEMESA,ou=whatever"
-        bOUUseMachineType=False
-    Else
-        sDestinationOU="ou=Computers,ou=DK,ou=NORDICS,ou=whatever"
-    End If
+Dim bStatus, sFunction, sDestinationOU, sDomain
+	Dim bOUUseMachineType
+	bStatus=True
+	bOUUseMachineType=True 'add laptop / desktop to OU Destination
+	Call Job_WriteLog("Custom_Sysprep_MachineObjectOU","Custom_Sysprep_MachineObjectOU: Function Start",True,True)
+	If bStatus Then bStatus=Job_WriteLog("Custom_Sysprep_MachineObjectOU","Adding computer to the right OU. - " & gsPCType,bStatus,False)
+	sDomain = ",dc=GW,dc=whatever,dc=COM"
+	If UCASE(gsPCType)="STANDARD DK" Then
+			sDestinationOU="ou=Computers,ou=DK,ou=NORDICS,ou=whatever"
+	ElseIf UCASE(gsPCType)="STANDARD SE" Then
+			sDestinationOU="ou=Computers,ou=SE,ou=NORDICS,ou=whatever"
+	ElseIf UCASE(gsPCType)="STANDARD NO" Then
+			sDestinationOU="ou=Computers,ou=NO,ou=NORDICS,ou=whatever"
+	ElseIf UCASE(gsPCType)="STANDARD HQ STOCKHOLM" Then
+			sDestinationOU="ou=Stockholm,ou=Computers,ou=HQ,ou=whatever"
+ElseIf UCASE(gsPCType)="STANDARD HQ SE" Then
+			sDestinationOU="ou=Stockholm,ou=Computers,ou=HQ,ou=whatever"
+	ElseIf UCASE(gsPCType)="STANDARD HQ AMSTERDAM" Then
+			sDestinationOU="ou=Amsterdam,ou=Computers,ou=HQ,ou=whatever"
+	ElseIf UCASE(gsPCType)="STANDARD HQ GOTHENBURG" Then
+			sDestinationOU="ou=Gothenburg,ou=Computers,ou=HQ,ou=whatever"
+	ElseIf UCASE(gsPCType)="STANDARD DE" Then
+			sDestinationOU="ou=Computers,ou=DE,ou=CEMESA,ou=whatever"
+			bOUUseMachineType=False
+	Else
+			sDestinationOU="ou=Computers,ou=DK,ou=NORDICS,ou=whatever"
+	End If
 
 
-    If bOUUseMachineType=True Then
-        If gbIsLaptop=True Then
-            sDestinationOU="OU=LapTops," & sDestinationOU
-        ElseIf gbIsDesktop=True OR customDesktopChassiType(15)=True Then '<--- # customDesktopChassiType function below for adding other computerchassi as Desktop!
-            sDestinationOU="OU=DeskTops," & sDestinationOU
-        Else
-            'Nothing
-        End If
-    End If
-    If bStatus Then bStatus=Job_WriteLog("Custom_Sysprep_MachineObjectOU","Moving computer to OU: " & sDestinationOU & sDomain,bStatus,False)
-    Select Case gsSysprepType
-        Case "INI"
-            If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"Identification","MachineObjectOU","""" & sDestinationOU & sDomain & """")
-        Case "XML"
-            If bStatus Then bStatus=Job_WriteLog("Custom_Sysprep_MachineObjectOU","Patching '" & gsUnattendFile & "'",bStatus,True)
-            'sComponentXpath = "//settings[@pass=" & """" & "specialize" & """" & "]/component[@name=" & """" & "Microsoft-Windows-UnattendedJoin" & """" & "]"
-            sComponentXpath="//settings[@pass='specialize']/component[@name='Microsoft-Windows-UnattendedJoin']"
-            If bStatus Then bStatus=Job_DisableLog("Custom_Sysprep_MachineObjectOU")
-            If bStatus Then bStatus=File_ExistFile(gsUnattendFile,true)
-            If bStatus Then bStatus=XmlFile_AddElement(gsUnattendFile, sComponentXpath, "Identification", "", True)
-            If bStatus Then bStatus=XmlFile_AddElement(gsUnattendFile, sComponentXpath & "/Identification", "MachineObjectOU", sDestinationOU & sDomain, True)
-            Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='specialize']/component[@name='Microsoft-Windows-UnattendedJoin']/Identification/MachineObjectOU")
-            oNode.Text = sDestinationOU & sDomain
-            goUnattendXml.Save gsUnattendFile
-            If bStatus Then bStatus=Job_EnableLog("Custom_Sysprep_MachineObjectOU")
-    End Select
-    Call Job_WriteLog("Custom_Sysprep_MachineObjectOU","Custom_Sysprep_MachineObjectOU: Function End",True,True)
-	Custom_Sysprep_MachineObjectOU=bStatus
+	If bOUUseMachineType=True Then
+			If gbIsLaptop=True Then
+					sDestinationOU="OU=LapTops," & sDestinationOU
+			ElseIf gbIsDesktop=True OR customDesktopChassiType(15)=True Then '<--- # customDesktopChassiType function below for adding other computerchassi as Desktop!
+					sDestinationOU="OU=DeskTops," & sDestinationOU
+			Else
+					'Nothing
+			End If
+	End If
+	If bStatus Then bStatus=Job_WriteLog("Custom_Sysprep_MachineObjectOU","Moving computer to OU: " & sDestinationOU & sDomain,bStatus,False)
+	Select Case gsSysprepType
+			Case "INI"
+					If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"Identification","MachineObjectOU","""" & sDestinationOU & sDomain & """")
+			Case "XML"
+					If bStatus Then bStatus=Job_WriteLog("Custom_Sysprep_MachineObjectOU","Patching '" & gsUnattendFile & "'",bStatus,True)
+					'sComponentXpath = "//settings[@pass=" & """" & "specialize" & """" & "]/component[@name=" & """" & "Microsoft-Windows-UnattendedJoin" & """" & "]"
+					sComponentXpath="//settings[@pass='specialize']/component[@name='Microsoft-Windows-UnattendedJoin']"
+					If bStatus Then bStatus=Job_DisableLog("Custom_Sysprep_MachineObjectOU")
+					If bStatus Then bStatus=File_ExistFile(gsUnattendFile,true)
+					If bStatus Then bStatus=XmlFile_AddElement(gsUnattendFile, sComponentXpath, "Identification", "", True)
+					If bStatus Then bStatus=XmlFile_AddElement(gsUnattendFile, sComponentXpath & "/Identification", "MachineObjectOU", sDestinationOU & sDomain, True)
+					Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='specialize']/component[@name='Microsoft-Windows-UnattendedJoin']/Identification/MachineObjectOU")
+					oNode.Text = sDestinationOU & sDomain
+					goUnattendXml.Save gsUnattendFile
+					If bStatus Then bStatus=Job_EnableLog("Custom_Sysprep_MachineObjectOU")
+	End Select
+	Call Job_WriteLog("Custom_Sysprep_MachineObjectOU","Custom_Sysprep_MachineObjectOU: Function End",True,True)
+Custom_Sysprep_MachineObjectOU=bStatus
 End Function
 
 
 Function Custom_Sysprep_RegionalSettings()
-  Dim bStatus
-  'Regional Information (Locale Identifier Constants and Strings)
-  'http://msdn.microsoft.com/en-us/library/dd373765(VS.85).aspx
-  'CountryCode: http://countrycode.org/finland
-  bStatus=True
-  sFunction="Custom_Sysprep_RegionalSettings"
-  If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings: Setting Language from installation type.",bStatus,False)
-  If gsSysprepType="INI" Then
-    If InStr(UCASE(gsPCType),"SE")>0 Then
-      If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings: Setting Language=SE",bStatus,False)
-      If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"TapiLocation", "CountryCode", "46")
-      If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "LanguageGroup", "1")
-      If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "SystemLocale", "0000041d")
-      If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "UserLocale", "0000041d")
-      If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "InputLocale", "041d:0000041d")
-    ElseIf InStr(UCASE(gsPCType),"DK")>0 Then
-      If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings: Setting Language=DK",bStatus,False)
-      If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"TapiLocation", "CountryCode", "45")
-      If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "LanguageGroup", "1")
-      If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "SystemLocale", "0000406")
-      If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "UserLocale", "0000406")
-      If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "InputLocale", "0406:00000406")
-    ElseIf InStr(UCASE(gsPCType),"NO")>0 Then
-      If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings: Setting Language=NO",bStatus,False)
-      If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"TapiLocation", "CountryCode", "47")
-      If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "LanguageGroup", "1")
-      If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "SystemLocale", "0000414")
-      If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "UserLocale", "0000414")
-      If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "InputLocale", "0414:00000414")
-    ElseIf InStr(UCASE(gsPCType),"FI")>0 Then
-      If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings: Setting Language=FI",bStatus,False)
-      If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"TapiLocation", "CountryCode", "358")
-      If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "LanguageGroup", "1")
-      If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "SystemLocale", "000040b")
-      If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "UserLocale", "000040b")
-      If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "InputLocale", "040b:0000040b")
-    ElseIf InStr(UCASE(gsPCType),"DE")>0 Then
-      If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings: Setting Language=DE",bStatus,False)
-      If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"TapiLocation", "CountryCode", "49")
-      If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "LanguageGroup", "1")
-      If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "SystemLocale", "0000407")'0x0407
-      If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "UserLocale", "0000407")
-      If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "InputLocale", "0407:00000407")
-    Else
-      If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings: No Language found from Installation Type Setting Default language=SE",bStatus,False)
-      If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"TapiLocation", "CountryCode", "46")
-      If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "LanguageGroup", "1")
-      If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "SystemLocale", "0000041d")
-      If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "UserLocale", "0000041d")
-      If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "InputLocale", "040b:0000041d")
-    End If
-  ElseIf gsSysprepType="XML" Then
-    If InStr(UCASE(gsPCType),"SE")>0 Then
-      If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings 7/Vista: Setting Language=SE",bStatus,False)
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/InputLocale")
-      oNode.Text="sv-SE; da-DK ; en-US; de-DE"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/SystemLocale")
-      oNode.Text="sv-SE"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguage")
-      oNode.Text="sv-SE"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguageFallback")
-      oNode.Text="en-US"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UserLocale")
-      oNode.Text="sv-SE"
-    ElseIf InStr(UCASE(gsPCType),"DK")>0 Then
-      If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings 7/Vista: Setting Language=DK",bStatus,False)
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/InputLocale")
-      oNode.Text="da-DK; sv-SE;  en-US; de-DE"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/SystemLocale")
-      oNode.Text="da-DK"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguage")
-      oNode.Text="da-DK"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguageFallback")
-      oNode.Text="en-US"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UserLocale")
-      oNode.Text="da-DK"
-    ElseIf InStr(UCASE(gsPCType),"NO")>0 Then
-      If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings 7/Vista: Setting Language=NO",bStatus,False)
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/InputLocale")
-      oNode.Text="nb-no;  en-US"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/SystemLocale")
-      oNode.Text="nb-no"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguage")
-      oNode.Text="nb-no"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguageFallback")
-      oNode.Text="en-US"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UserLocale")
-      oNode.Text="nb-no"
-    ElseIf InStr(UCASE(gsPCType),"FI")>0 Then
-      If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings 7/Vista: Setting Language=FI",bStatus,False)
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/InputLocale")
-      oNode.Text="fi-FI;  en-US"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/SystemLocale")
-      oNode.Text="fi-FI"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguage")
-      oNode.Text="fi-FI"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguageFallback")
-      oNode.Text="en-US"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UserLocale")
-      oNode.Text="fi-FI"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='specialize']/component[@name='Microsoft-Windows-Shell-Setup']/TimeZone")
-      oNode.Text="FLE Standard Time"
-    ElseIf InStr(UCASE(gsPCType),"DE")>0 Then
-      If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings 7/Vista: Setting Language=DE",bStatus,False)
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/InputLocale")
-      oNode.Text="de-DE;  en-US"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/SystemLocale")
-      oNode.Text="de-DE"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguage")
-      oNode.Text="de-DE"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguageFallback")
-      oNode.Text="en-US"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UserLocale")
-      oNode.Text="de-DE"
-    ElseIf InStr(UCASE(gsPCType),"AMSTERDAM")>0 Then
-      If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings 7/Vista: Setting Language=AMSTERDAM",bStatus,False)
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/InputLocale")
-      oNode.Text="en-US"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/SystemLocale")
-      oNode.Text="en-US"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguage")
-      oNode.Text="en-US"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguageFallback")
-      oNode.Text="en-US"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UserLocale")
-      oNode.Text="nl-NL"
-    ElseIf InStr(UCASE(gsPCType),"GLOBAL")>0 Then
-      If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings 7/Vista: Setting Language=GLOBAL",bStatus,False)
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/InputLocale")
-      oNode.Text="en-US"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/SystemLocale")
-      oNode.Text="en-US"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguage")
-      oNode.Text="en-US"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguageFallback")
-      oNode.Text="en-US"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UserLocale")
-      oNode.Text="en-US"
-    Else
-      If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings 7/Vista: No Language found from Installation Type Setting Default language=SE",bStatus,False)
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/InputLocale")
-      oNode.Text="sv-SE; da-DK ; en-US; de-DE"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/SystemLocale")
-      oNode.Text="sv-SE"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguage")
-      oNode.Text="sv-SE"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguageFallback")
-      oNode.Text="en-US"
-      Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UserLocale")
-      oNode.Text="sv-SE"
-    End If
-    goUnattendXml.Save gsUnattendFile
-  End If
-  If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings: Setting Language ended. " & cstr(bStatus),bStatus,False)
-  Custom_Sysprep_RegionalSettings=bStatus
+Dim bStatus
+'Regional Information (Locale Identifier Constants and Strings)
+'http://msdn.microsoft.com/en-us/library/dd373765(VS.85).aspx
+'CountryCode: http://countrycode.org/finland
+bStatus=True
+sFunction="Custom_Sysprep_RegionalSettings"
+If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings: Setting Language from installation type.",bStatus,False)
+If gsSysprepType="INI" Then
+	If InStr(UCASE(gsPCType),"SE")>0 Then
+		If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings: Setting Language=SE",bStatus,False)
+		If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"TapiLocation", "CountryCode", "46")
+		If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "LanguageGroup", "1")
+		If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "SystemLocale", "0000041d")
+		If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "UserLocale", "0000041d")
+		If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "InputLocale", "041d:0000041d")
+	ElseIf InStr(UCASE(gsPCType),"DK")>0 Then
+		If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings: Setting Language=DK",bStatus,False)
+		If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"TapiLocation", "CountryCode", "45")
+		If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "LanguageGroup", "1")
+		If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "SystemLocale", "0000406")
+		If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "UserLocale", "0000406")
+		If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "InputLocale", "0406:00000406")
+	ElseIf InStr(UCASE(gsPCType),"NO")>0 Then
+		If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings: Setting Language=NO",bStatus,False)
+		If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"TapiLocation", "CountryCode", "47")
+		If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "LanguageGroup", "1")
+		If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "SystemLocale", "0000414")
+		If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "UserLocale", "0000414")
+		If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "InputLocale", "0414:00000414")
+	ElseIf InStr(UCASE(gsPCType),"FI")>0 Then
+		If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings: Setting Language=FI",bStatus,False)
+		If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"TapiLocation", "CountryCode", "358")
+		If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "LanguageGroup", "1")
+		If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "SystemLocale", "000040b")
+		If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "UserLocale", "000040b")
+		If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "InputLocale", "040b:0000040b")
+	ElseIf InStr(UCASE(gsPCType),"DE")>0 Then
+		If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings: Setting Language=DE",bStatus,False)
+		If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"TapiLocation", "CountryCode", "49")
+		If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "LanguageGroup", "1")
+		If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "SystemLocale", "0000407")'0x0407
+		If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "UserLocale", "0000407")
+		If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "InputLocale", "0407:00000407")
+	Else
+		If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings: No Language found from Installation Type Setting Default language=SE",bStatus,False)
+		If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"TapiLocation", "CountryCode", "46")
+		If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "LanguageGroup", "1")
+		If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "SystemLocale", "0000041d")
+		If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "UserLocale", "0000041d")
+		If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"RegionalSettings", "InputLocale", "040b:0000041d")
+	End If
+ElseIf gsSysprepType="XML" Then
+	If InStr(UCASE(gsPCType),"SE")>0 Then
+		If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings 7/Vista: Setting Language=SE",bStatus,False)
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/InputLocale")
+		oNode.Text="sv-SE; da-DK ; en-US; de-DE"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/SystemLocale")
+		oNode.Text="sv-SE"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguage")
+		oNode.Text="sv-SE"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguageFallback")
+		oNode.Text="en-US"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UserLocale")
+		oNode.Text="sv-SE"
+	ElseIf InStr(UCASE(gsPCType),"DK")>0 Then
+		If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings 7/Vista: Setting Language=DK",bStatus,False)
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/InputLocale")
+		oNode.Text="da-DK; sv-SE;  en-US; de-DE"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/SystemLocale")
+		oNode.Text="da-DK"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguage")
+		oNode.Text="da-DK"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguageFallback")
+		oNode.Text="en-US"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UserLocale")
+		oNode.Text="da-DK"
+	ElseIf InStr(UCASE(gsPCType),"NO")>0 Then
+		If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings 7/Vista: Setting Language=NO",bStatus,False)
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/InputLocale")
+		oNode.Text="nb-no;  en-US"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/SystemLocale")
+		oNode.Text="nb-no"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguage")
+		oNode.Text="nb-no"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguageFallback")
+		oNode.Text="en-US"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UserLocale")
+		oNode.Text="nb-no"
+	ElseIf InStr(UCASE(gsPCType),"FI")>0 Then
+		If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings 7/Vista: Setting Language=FI",bStatus,False)
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/InputLocale")
+		oNode.Text="fi-FI;  en-US"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/SystemLocale")
+		oNode.Text="fi-FI"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguage")
+		oNode.Text="fi-FI"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguageFallback")
+		oNode.Text="en-US"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UserLocale")
+		oNode.Text="fi-FI"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='specialize']/component[@name='Microsoft-Windows-Shell-Setup']/TimeZone")
+		oNode.Text="FLE Standard Time"
+	ElseIf InStr(UCASE(gsPCType),"DE")>0 Then
+		If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings 7/Vista: Setting Language=DE",bStatus,False)
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/InputLocale")
+		oNode.Text="de-DE;  en-US"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/SystemLocale")
+		oNode.Text="de-DE"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguage")
+		oNode.Text="de-DE"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguageFallback")
+		oNode.Text="en-US"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UserLocale")
+		oNode.Text="de-DE"
+	ElseIf InStr(UCASE(gsPCType),"AMSTERDAM")>0 Then
+		If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings 7/Vista: Setting Language=AMSTERDAM",bStatus,False)
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/InputLocale")
+		oNode.Text="en-US"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/SystemLocale")
+		oNode.Text="en-US"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguage")
+		oNode.Text="en-US"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguageFallback")
+		oNode.Text="en-US"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UserLocale")
+		oNode.Text="nl-NL"
+	ElseIf InStr(UCASE(gsPCType),"GLOBAL")>0 Then
+		If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings 7/Vista: Setting Language=GLOBAL",bStatus,False)
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/InputLocale")
+		oNode.Text="en-US"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/SystemLocale")
+		oNode.Text="en-US"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguage")
+		oNode.Text="en-US"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguageFallback")
+		oNode.Text="en-US"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UserLocale")
+		oNode.Text="en-US"
+	Else
+		If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings 7/Vista: No Language found from Installation Type Setting Default language=SE",bStatus,False)
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/InputLocale")
+		oNode.Text="sv-SE; da-DK ; en-US; de-DE"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/SystemLocale")
+		oNode.Text="sv-SE"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguage")
+		oNode.Text="sv-SE"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UILanguageFallback")
+		oNode.Text="en-US"
+		Set oNode = goUnattendXml.selectSingleNode("//settings[@pass='oobeSystem']/component[@name='Microsoft-Windows-International-Core']/UserLocale")
+		oNode.Text="sv-SE"
+	End If
+	goUnattendXml.Save gsUnattendFile
+End If
+If bStatus Then bStatus=Job_WriteLog(sFunction,"RegionalSettings: Setting Language ended. " & cstr(bStatus),bStatus,False)
+Custom_Sysprep_RegionalSettings=bStatus
 End Function
 
 
 Function Custom_OSD_Initialize()
-    Dim bStatus
-    bStatus=True
-    Call Job_WriteLog("Custom_OSD_Initialize","Custom_OSD_Initialize: Function Start",True,True)
-    If gsSysprepType="XML" Then
-        If bStatus Then bStatus=File_ExistFile(gsUnattendFile,False)
-        If gbValue Then
-        Call Job_WriteLog(sFunction,"Custom_OSD_Initialize: Unattende XML file for Windows 7/Vista Found - Initializing The File: '" & gsUnattendFile & "'",True,True)
-        Set goUnattendXml = CreateObject("MSXML2.DOMDocument")
-        goUnattendXml.load gsUnattendFile
-        End If
-    End If
-    Call Job_WriteLog("Custom_OSD_Initialize","Custom_OSD_Initialize: Function End",True,True)
-    Custom_OSD_Initialize=bStatus
+	Dim bStatus
+	bStatus=True
+	Call Job_WriteLog("Custom_OSD_Initialize","Custom_OSD_Initialize: Function Start",True,True)
+	If gsSysprepType="XML" Then
+			If bStatus Then bStatus=File_ExistFile(gsUnattendFile,False)
+			If gbValue Then
+			Call Job_WriteLog(sFunction,"Custom_OSD_Initialize: Unattende XML file for Windows 7/Vista Found - Initializing The File: '" & gsUnattendFile & "'",True,True)
+			Set goUnattendXml = CreateObject("MSXML2.DOMDocument")
+			goUnattendXml.load gsUnattendFile
+			End If
+	End If
+	Call Job_WriteLog("Custom_OSD_Initialize","Custom_OSD_Initialize: Function End",True,True)
+	Custom_OSD_Initialize=bStatus
 End Function
 
 
 Function Custom_Log_ResetConfidentialData()
-    Dim bStatus
-    bStatus=True
-    Call Job_WriteLog("Custom_Log_ResetConfidentialData","Custom_Log_ResetConfidentialData: Function Start",True,True)
-    sLogServerPath=gsLogServerFolder & "\" & gsNewComputerName
-    If gsSysprepType="XML" Then
-        If bStatus Then bStatus=File_InsertInFile(sLogServerPath & "\Windows\Panther\Unattend.xml","<password","***** String Removed ******",False,True,"BEFORE")
-        If bStatus Then bStatus=File_DeleteLineInFile(sLogServerPath & "\Windows\Panther\Unattend.xml", "<password", False, True)
-    Else
-        If bStatus Then bStatus=Ini_WriteEntry(sLogServerPath & "\sysprep\Sysprep.inf","GuiUnattended","AdminPassword","***** String Removed ******")
-        If bStatus Then bStatus=Ini_WriteEntry(sLogServerPath & "\sysprep\Sysprep.inf","Identification","DomainAdminPassword","***** String Removed ******")
-    End If
-    Call Job_WriteLog("Custom_Log_ResetConfidentialData","Custom_Log_ResetConfidentialData: Function End",True,True)
-    Custom_Log_ResetConfidentialData=bStatus
+	Dim bStatus
+	bStatus=True
+	Call Job_WriteLog("Custom_Log_ResetConfidentialData","Custom_Log_ResetConfidentialData: Function Start",True,True)
+	sLogServerPath=gsLogServerFolder & "\" & gsNewComputerName
+	If gsSysprepType="XML" Then
+			If bStatus Then bStatus=File_InsertInFile(sLogServerPath & "\Windows\Panther\Unattend.xml","<password","***** String Removed ******",False,True,"BEFORE")
+			If bStatus Then bStatus=File_DeleteLineInFile(sLogServerPath & "\Windows\Panther\Unattend.xml", "<password", False, True)
+	Else
+			If bStatus Then bStatus=Ini_WriteEntry(sLogServerPath & "\sysprep\Sysprep.inf","GuiUnattended","AdminPassword","***** String Removed ******")
+			If bStatus Then bStatus=Ini_WriteEntry(sLogServerPath & "\sysprep\Sysprep.inf","Identification","DomainAdminPassword","***** String Removed ******")
+	End If
+	Call Job_WriteLog("Custom_Log_ResetConfidentialData","Custom_Log_ResetConfidentialData: Function End",True,True)
+	Custom_Log_ResetConfidentialData=bStatus
 End Function
 
 
 Function Custom_Log_CopyToServer()
-    Dim bStatus
-    bStatus=True
-    'files have not been registered
-    Call Job_WriteLog("Custom_Log_CopyToServer","Custom_Log_CopyToServer: Function Start",True,True)
-    sLogServerPath=gsLogServerFolder & "\" & gsNewComputerName
-    If bStatus Then Call File_Deltree(sLogServerPath,True)
-    If bStatus Then Call File_CreateDirectory(sLogServerPath)
-    If bStatus Then Call File_CreateDirectory(sLogServerPath & "\Advanced")
+	Dim bStatus
+	bStatus=True
+	'files have not been registered
+	Call Job_WriteLog("Custom_Log_CopyToServer","Custom_Log_CopyToServer: Function Start",True,True)
+	sLogServerPath=gsLogServerFolder & "\" & gsNewComputerName
+	If bStatus Then Call File_Deltree(sLogServerPath,True)
+	If bStatus Then Call File_CreateDirectory(sLogServerPath)
+	If bStatus Then Call File_CreateDirectory(sLogServerPath & "\Advanced")
 
-    If bStatus Then bStatus=File_ExistFile(gsDeployToDrive & "Windows\Panther\Unattend.xml",False)
-    If bStatus And gbValue Then bStatus=File_CreateDirectory(sLogServerPath & "\Windows\Panther"):bStatus=File_CopyFile(gsDeployToDrive & "Windows\Panther\Unattend.xml",sLogServerPath & "\Windows\Panther\Unattend.xml",True)
-    If bStatus Then bStatus=File_ExistFile(gsDeployToDrive & "sysprep\Sysprep.inf",False)
-    If bStatus And gbValue Then bStatus=File_CreateDirectory(sLogServerPath & "\sysprep"):bStatus=File_CopyFile(gsDeployToDrive & "sysprep\Sysprep.inf",sLogServerPath & "\sysprep\Sysprep.inf",True)
-    If bStatus Then bStatus=File_ExistFile(gsDeployToDrive & "sysprep\I386\$OEM$\CmdLines.txt",False)
-    If bStatus And gbValue Then bStatus=File_CreateDirectory(sLogServerPath & "\sysprep\I386\$OEM$"):bStatus=File_CopyFile(gsDeployToDrive & "sysprep\I386\$OEM$\CmdLines.txt",sLogServerPath & "\sysprep\I386\$OEM$\CmdLines.txt",True)
-    If bStatus Then bStatus=File_CopyTree("x:\Logs",sLogServerPath & "\OSD",False)
-	If bStatus Then bStatus=File_CopyTree("x:\Program Files\Capainstaller\Client\Logs\Advanced",sLogServerPath & "\Advanced",False)
+	If bStatus Then bStatus=File_ExistFile(gsDeployToDrive & "Windows\Panther\Unattend.xml",False)
+	If bStatus And gbValue Then bStatus=File_CreateDirectory(sLogServerPath & "\Windows\Panther"):bStatus=File_CopyFile(gsDeployToDrive & "Windows\Panther\Unattend.xml",sLogServerPath & "\Windows\Panther\Unattend.xml",True)
+	If bStatus Then bStatus=File_ExistFile(gsDeployToDrive & "sysprep\Sysprep.inf",False)
+	If bStatus And gbValue Then bStatus=File_CreateDirectory(sLogServerPath & "\sysprep"):bStatus=File_CopyFile(gsDeployToDrive & "sysprep\Sysprep.inf",sLogServerPath & "\sysprep\Sysprep.inf",True)
+	If bStatus Then bStatus=File_ExistFile(gsDeployToDrive & "sysprep\I386\$OEM$\CmdLines.txt",False)
+	If bStatus And gbValue Then bStatus=File_CreateDirectory(sLogServerPath & "\sysprep\I386\$OEM$"):bStatus=File_CopyFile(gsDeployToDrive & "sysprep\I386\$OEM$\CmdLines.txt",sLogServerPath & "\sysprep\I386\$OEM$\CmdLines.txt",True)
+	If bStatus Then bStatus=File_CopyTree("x:\Logs",sLogServerPath & "\OSD",False)
+If bStatus Then bStatus=File_CopyTree("x:\Program Files\Capainstaller\Client\Logs\Advanced",sLogServerPath & "\Advanced",False)
 
-    Call Custom_Log_ResetConfidentialData()
-    Call Job_WriteLog("Custom_Log_CopyToServer","Custom_Log_CopyToServer: Function End",True,True)
-    Custom_Log_CopyToServer=bStatus
+	Call Custom_Log_ResetConfidentialData()
+	Call Job_WriteLog("Custom_Log_CopyToServer","Custom_Log_CopyToServer: Function End",True,True)
+	Custom_Log_CopyToServer=bStatus
 End Function
 
 
 Function Custom()
-    Dim bStatus
-    'Begin
-    bStatus=True
-    If bStatus Then bStatus=Custom_OSD_Initialize()
-    If bStatus Then bStatus=OSD_UpdateWindowsHAL()
-    If bStatus Then bStatus=OSD_SetOEMWallpaper()
-    If bStatus Then bStatus=Custom_Sysprep_MachineObjectOU()
-    If bStatus Then bStatus=Custom_Sysprep_RegionalSettings()
+	Dim bStatus
+	'Begin
+	bStatus=True
+	If bStatus Then bStatus=Custom_OSD_Initialize()
+	If bStatus Then bStatus=OSD_UpdateWindowsHAL()
+	If bStatus Then bStatus=OSD_SetOEMWallpaper()
+	If bStatus Then bStatus=Custom_Sysprep_MachineObjectOU()
+	If bStatus Then bStatus=Custom_Sysprep_RegionalSettings()
 	If bStatus Then bStatus=OSD_EnableInstallScreen()
-    Call Custom_Log_CopyToServer()
-    Custom=bStatus
+	Call Custom_Log_CopyToServer()
+	Custom=bStatus
 End Function
 
 
 'Begin
-  bStatus=True
-  If bStatus Then bStatus=IncludeScript("customlib.cis")
-  If bStatus Then bStatus=IncludeLibrary("Capalib.cin")
-  If bStatus Then bStatus=IncludeLibrary("Osdlib.cin")
-  If bStatus Then bStatus=Job_Start("WS","PreBootScript","1.0","PreBootScript.log","INSTALL")
-  If bStatus Then bStatus=OSD_Initialize()
-  If bStatus Then bStatus=Custom()
-  Call Job_End(bStatus)
+bStatus=True
+If bStatus Then bStatus=IncludeScript("customlib.cis")
+If bStatus Then bStatus=IncludeLibrary("Capalib.cin")
+If bStatus Then bStatus=IncludeLibrary("Osdlib.cin")
+If bStatus Then bStatus=Job_Start("WS","PreBootScript","1.0","PreBootScript.log","INSTALL")
+If bStatus Then bStatus=OSD_Initialize()
+If bStatus Then bStatus=Custom()
+Call Job_End(bStatus)
 'End main
 
-	</script>
+</script>
 </job>

@@ -1,0 +1,154 @@
+<job>
+	<script language="VBScript">
+' // ***** Script Header *****
+' //
+' // File:      PreBootScript.wsf
+' //
+' // Customer Script Version:
+' //
+' *************************************************************************************
+' * Global script Declarations
+' *************************************************************************************
+'
+Const CLEAN_LOGS=True					'Remove passwors, productkeys from files copied to log directory
+Const CUSTOM_DEBUG=False						' If true, messagebox will be displayed at end of script.
+Dim gsScriptVersion:gsScriptVersion="12:05 22. marts 2013"
+Dim gsScriptName:gsScriptName="PreBootScript.Wsf"'
+
+' *************************************************************************************
+' * Library Declarations
+' *************************************************************************************
+Dim bStatus
+
+
+'*************************************************************************************
+
+	Private Function IncludeScript(sScriptFile)
+		Dim oLocalFso
+		Dim sCmd
+		Dim sClientDir
+		Dim oLocalShell
+		'Begin
+		bStatus=True
+		On Error Resume Next
+		Set oLocalShell=CreateObject("WScript.Shell")
+		Set oLocalFSO = CreateObject("Scripting.FileSystemObject")
+		sClientDir=oLocalShell.RegRead("HKLM\Software\CapaSystems\CapaInstaller\Client Directory")
+		sScriptDir = Mid(WScript.ScriptFullName,1,Len(WScript.ScriptFullName)-Len(WScript.ScriptName)-1)
+		If bStatus and (sClientDir<>"") Then
+			If oLocalFSO.FileExists(sScriptDir & "\" & sScriptFile) Then
+				sCmd = oLocalFSO.OpenTextFile(sScriptDir & "\" & sScriptFile,1).ReadAll
+			ElseIf oLocalFSO.FileExists(sClientDir & "\Lib\" & sScriptFile) Then
+				sCmd = oLocalFSO.OpenTextFile(sClientDir & "\Lib\" & sScriptFile,1).ReadAll
+			End If
+		Else
+			bStatus=False
+		End If
+		ExecuteGlobal sCmd
+		IncludeScript=bStatus
+	End Function
+
+
+Function Custom()
+	Dim bStatus
+	'Begin
+	bStatus=True
+	If gsSysprepType="XML" Then 'IS Windows 7/Vista
+		'Enable OEM loginwallpaper. Requires that '%windir%\System32\oobe\info\backgrounds\backgroundDefault.jpg' exists, this file is copied through OSD extra files in image folder.
+        Call Custom_OSD_EnableWindows7InstallScreen()
+	Else 'Windows XP '
+        Call OSD_UpdateWindowsHAL()
+		Call ChangeDefaultWallpaper("c:\Windows\InstallationWallpaper.bmp") 'IS Windows XP
+	End If
+    Call Inventar_WriteDataToRegistryHive()
+	Call Installation_Type()
+	Custom=bStatus
+End Function
+
+
+Function Installation_Type()
+	Dim bStatus, sDestinationOU
+	bStatus=True
+    If bStatus Then bStatus=Job_WriteLog("Installation_Type","Installation_Type: Start",bStatus,False)
+    If bStatus Then bStatus=Reg_GetString("HKLM","Software\CapaSystems\tst\OSD","LdapDestination",True)
+	' If NOT gbValue Then
+	  ' Call Job_ShowMessage("Registry Error", "'HKLM\Software\CapaSystems\tst\OSD\LdapDestination' not found - cannot continue with installation!" + _
+	                       ' vbCrlf + vbCrlf + "Please turn off the computer and corret the issue." , 0,48,86400)
+      ' bstatus=False
+	' End If
+    If bStatus Then sDestinationOU=gsValue
+    If bStatus Then bStatus=Job_WriteLog("Installation_Type","Moving computer to OU: " & sDestinationOU,bStatus,False)
+    If bStatus Then bStatus=File_ExistFile("c:\Windows\Panther\Unattend.xml",False)
+    If gsSysprepType="XML" Then 'IS Windows 7/Vista
+    Else 'Windows XP
+        If bStatus Then bStatus=Ini_WriteEntry(gsUnattendFile,"Identification","MachineObjectOU","""" & sDestinationOU & """")
+    End If
+    If bStatus Then bStatus=Job_WriteLog("Installation_Type","HostsFileConfig: End",bStatus,False)
+	Installation_Type=bStatus
+End Function
+
+
+Function Custom_OSD_EnableWindows7InstallScreen()
+    Dim bStatus, sFunction, sInstallScreenLauncher,sSuppressMessageBoxesDurringInitialInstall
+    bStatus = True
+    sFunction = "Custom_OSD_EnableWindows7InstallScreen"
+    If bStatus Then bStatus=Job_WriteLog(sFunction,"Custom_OSD_EnableWindows7InstallScreen: Startet",bStatus,False)
+
+    sInstallScreenPath= gsDeployToDrive & "Windows\CIINST"
+    sInstallScreenLauncher = sInstallScreenPath & "\StartInstallScreen.vbs"
+    sSuppressMessageBoxesDurringInitialInstall = True
+    If bStatus Then bStatus=File_ExistDir(sInstallScreenPath,False)
+    If bStatus and gbValue Then
+            sScriptContent = ""
+            sScriptContent = sScriptContent & "Dim WshShell, fso, sInstallScreenPath, bRelaunch" & vbCrLf
+            sScriptContent = sScriptContent & "bRelaunch = False" & vbCrLf
+            sScriptContent = sScriptContent & "Set WshShell = WScript.CreateObject(""WScript.Shell"")" & vbCrLf
+            sScriptContent = sScriptContent & "Set fso = CreateObject(""Scripting.FileSystemObject"")" & vbCrLf
+            sScriptContent = sScriptContent & "sInstallScreenPath=""" & sInstallScreenPath & """" & vbCrLf
+            sScriptContent = sScriptContent & "If fso.FileExists(sInstallScreenPath & ""\InstallationScreen.exe"") = False Then" & vbCrLf
+            sScriptContent = sScriptContent & "   wscript.echo ""ERROR: Could not find InstallationScreen.exe""" & vbCrLf
+            sScriptContent = sScriptContent & "Else" & vbCrLf
+            sScriptContent = sScriptContent & "   WshShell.RegWrite ""HKLM\Software\CapaSystems\CapaInstaller\ciNotify\FinalReboot"", 0 ,""REG_DWORD""" & vbCrLf
+            sScriptContent = sScriptContent & "   WshShell.RegWrite ""HKLM\Software\CapaSystems\CapaInstaller\ciNotify\NotifyEnabled"", 1 ,""REG_DWORD""" & vbCrLf
+            sScriptContent = sScriptContent & "   WshShell.RegWrite ""HKLM\Software\CapaSystems\CapaInstaller\OSD\StandardInstallation"", ""True"" ,""REG_SZ""" & vbCrLf    ' with this enabled, all Region Midt specifc code is disabled
+            sScriptContent = sScriptContent & "   If WshShell.RegRead(""HKLM\System\Setup\SystemSetupInProgress"") = 1 Then bRelaunch = True" & vbCrLf
+            sScriptContent = sScriptContent & "   If bRelaunch then WshShell.Run ""C:\Windows\CIINST\paexec.exe -i -d "" & sInstallScreenPath & ""\InstallationScreen.exe"", 0, False" & vbCrLf
+            sScriptContent = sScriptContent & "   If bRelaunch = False then WshShell.Run ""C:\Windows\CIINST\paexec.exe -i -d "" & sInstallScreenPath & ""\InstallationScreen.exe"", 0, False" & vbCrLf
+            sScriptContent = sScriptContent & "End If" & vbCrLf
+            sScriptContent = sScriptContent & "WScript.Sleep 1000" & vbCrLf
+            sScriptContent = sScriptContent & "WshShell.Run ""%WINDIR%\System32\oobe\windeploy.exe"", 0, True" & vbCrLf
+            sScriptContent = sScriptContent & "If bRelaunch Then WshShell.RegWrite ""HKLM\System\Setup\CmdLine"" , ""wscript //nologo //B " & sInstallScreenLauncher & """ , ""REG_SZ""" & vbCrLf
+            sScriptContent = sScriptContent & "If bRelaunch = False Then WshShell.RegWrite ""HKLM\System\Setup\CmdLine"" , ""wscript //nologo //B " & sInstallScreenLauncher & """ , ""REG_SZ""" & vbCrLf
+        If bStatus Then bStatus=File_CreateEmptyFile(sInstallScreenLauncher,False)
+        If bStatus Then bStatus=File_InsertInFile(sInstallScreenLauncher,"",sScriptContent,True,True,"TOP")
+        If bStatus Then bStatus=Reg_LoadHive(gsREGTempHive,gsREGFile)
+        If bStatus Then bStatus=Reg_SetString("HKLM","TempHive\Setup","CmdLine","wscript.exe //B //nologo " & sInstallScreenLauncher)
+        Call Reg_UnLoadHive(gsREGTempHive)
+        If bStatus and sSuppressMessageBoxesDurringInitialInstall Then
+            If bStatus Then bStatus=File_CreateDirectory(gsDeployToDrive & "Program Files\CapaInstaller\Client")
+            If bStatus Then bStatus=File_CreateEmptyFile(gsDeployToDrive & "Program Files\CapaInstaller\Client\SilentInstall.dat" , False)
+        End If
+        If bStatus Then bStatus=Sysprep_AddRunCommand("Install Installation Screen Service", gsDeployToDrive & "windows\System32\cmd.exe /c msiexec /i " & sInstallScreenPath & "\InstallService.msi /qn")
+    End If
+    If bStatus Then bStatus=Job_WriteLog(sFunction,"Custom_OSD_EnableWindows7InstallScreen: End",bStatus,False)
+    Custom_OSD_EnableWindows7InstallScreen=bStatus
+End Function
+
+
+
+'Begin main
+	bStatus=True
+
+	If bStatus Then bStatus=IncludeScript("customlib.cis")
+	If bStatus Then bStatus=IncludeLibrary("capalib.cin")
+	If bStatus Then bStatus=IncludeLibrary("osdlib.cin")
+	If bStatus Then bStatus=IncludeScript("OSDCustomlib.cis")
+
+    If bStatus Then bStatus=Job_Start("WS","Preboot Script","v1.0","PreBootScript.Log","INSTALL")
+    If bStatus Then bStatus=OSD_Initialize()
+    If bStatus Then bStatus=Custom()
+    Call Custom_CopyLogs()
+    bStatus=Job_End(bStatus)
+
+	</script>
+</job>

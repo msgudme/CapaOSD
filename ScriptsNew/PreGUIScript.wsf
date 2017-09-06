@@ -1,0 +1,208 @@
+'CapaInstaller OSD Deployment Script for PreGUIScript
+<job id=PreGUIScript>
+	<script language="vbscript">
+
+	Const CUSTOM_DEBUG=False	' If true, messagebox will be displayed at end of script.
+
+    Dim gsComputerNamePrefix:gsComputerNamePrefix="PC"
+    Dim gsVirtualComputerNamePrefix:gsVirtualComputerNamePrefix="VM"
+
+
+'Inventar Variables
+	' gsInventar_BarCode=sBarCode
+	' gsInventar_Location=sLocation
+	' gsInventar_LocationPerson=sLocationPerson
+	' gsInventar_MacAddress=sMacAddress
+	' gsInventar_SerialNumber=sSerialNumber
+	' gsInventar_LastControl=sLastControl
+
+	Private Function IncludeScript(sScriptFile)
+		Dim oLocalFso
+		Dim sCmd
+		Dim sClientDir
+		Dim oLocalShell
+		'Begin
+		bStatus=True
+		On Error Resume Next
+		Set oLocalShell=CreateObject("WScript.Shell")
+		Set oLocalFSO = CreateObject("Scripting.FileSystemObject")
+		sClientDir=oLocalShell.RegRead("HKLM\Software\CapaSystems\CapaInstaller\Client Directory")
+		sScriptDir = Mid(WScript.ScriptFullName,1,Len(WScript.ScriptFullName)-Len(WScript.ScriptName)-1)
+		If bStatus and (sClientDir<>"") Then
+			If oLocalFSO.FileExists(sScriptDir & "\" & sScriptFile) Then
+				sCmd = oLocalFSO.OpenTextFile(sScriptDir & "\" & sScriptFile,1).ReadAll
+			ElseIf oLocalFSO.FileExists(sClientDir & "\Lib\" & sScriptFile) Then
+				sCmd = oLocalFSO.OpenTextFile(sClientDir & "\Lib\" & sScriptFile,1).ReadAll
+			End If
+		Else
+			bStatus=False
+		End If
+		ExecuteGlobal sCmd
+		IncludeScript=bStatus
+	End Function
+
+
+    Private Function Custom()
+        Dim bStatus
+        bStatus=True
+		IF CUSTOM_DEBUG Then WScript.echo "gsSerialNumber ..: " + gsSerialNumber
+		IF CUSTOM_DEBUG Then Call Job_WriteLog("Custom","DEBUG: gsSerialNumber ..: " + gsSerialNumber,True,True)
+		'If bStatus Then bStatus=Net_GetAdapterInfo()
+        If bStatus Then bStatus=Custom_Network_GetMacAddress() 'Collect MAC Addresses fom local network cards - gdicMacAddress
+        If bStatus Then bStatus=Inventar_Install_MySQL_ODBCDrivers()
+        If bStatus Then bStatus=Inventar_ConnectToDatabase()
+
+        If bStatus Then bStatus=Inventar_GetBarcodeFromSerialNumber(gsSerialNumber)
+
+		If bStatus Then bStatus=Reg_GetString("HKLM","Software\CapaSystems\tst\Inventar","barcode",False)
+		IF CUSTOM_DEBUG Then WScript.echo CStr(bStatus) + " - GetBarcodeFromSerialNumber Found: " + gsValue
+
+		If gsValue = "Multiple" Then
+			Call Job_ShowMessage("Inventory Database", "This Computer is not registered correctly in the 'Inventory Database'." & vbCrlf & vbCrlf & "There are more than one computer registred with this serial number (" + gsSerialNumber + ") in the DB. Please correct this ASAP!", 0,48,86400)
+			gsValue=""		' Let's give the mac adderss a try.
+		End If
+
+		If bStatus And gsValue<>"" Then
+			IF CUSTOM_DEBUG Then WScript.echo CStr(bStatus) + " - GetBarcodeFromSerialNumber Found: " + gsValue
+			IF CUSTOM_DEBUG Then Call Job_WriteLog("Custom","DEBUG: GetBarcodeFromSerialNumber Found: " + gsValue,True,True)
+
+			'Setting Computer Name with data from Inventar database
+			gsNewComputerName=gsComputerNamePrefix & gsValue
+			If gsValue<>"" Then If bStatus Then bStatus=Reg_SetString("HKLM","SOFTWARE\CapaSystems\CapaInstaller\OSD","NewComputerName",gsNewComputerName)
+		Else 	'Computer Not found with serial number trying to Search after mac address in inventar database
+			IF CUSTOM_DEBUG Then WScript.echo CStr(bStatus) + " - Computer Not found with serial number trying to Search after mac address"
+
+			For Each sMacAddress In gdicMacAddress
+    			IF CUSTOM_DEBUG Then WScript.echo CStr(bStatus) + " - Calling Inventar_GetBarcodeFromMacAddress with: " + CStR(sMacAddress)
+				sSMacAdress=sMacAddress
+				If bStatus Then bStatus=Inventar_GetBarcodeFromMacAddress(sMacAddress)
+
+				If bStatus Then bStatus=Reg_GetString("HKLM","Software\CapaSystems\tst\Inventar","mac_address",False)
+				IF CUSTOM_DEBUG Then WScript.echo CStr(bStatus) + " - GetBarcodeFromMacAddress Found: " + gsValue
+				If gsValue = "Multiple" Then
+					Call Job_ShowMessage("Inventory Database", "This Computer is not registered correctly in the 'Inventory Database'." & vbCrlf & vbCrlf & "There are more than one computer registred with this mac address (" + sSMacAdress + ") in the DB. Please correct this ASAP!", 0,48,86400)
+					gsValue=""		' Let's just forget about it!
+				End If
+
+				If gsValue<>"" Then
+					IF CUSTOM_DEBUG Then WScript.echo CStr(bStatus) + " - Inventar_GetBarcodeFromMacAddress Found: " + gsValue
+					IF CUSTOM_DEBUG Then Call Job_WriteLog("Custom","DEBUG: Inventar_GetBarcodeFromMacAddress Found: " + gsValue,True,True)
+					Call Job_ShowMessage("Inventory Database", "This Computer is not registered correctly in the 'Inventory Database'." & vbCrlf & vbCrlf & "The serial number in the DB is wrong or not existing. Please correct this ASAP!" & vbCrlf & vbCrlf & "The Computer was found by mac address and you may continue with the installation.", 0,64,86400)
+					Exit For
+				Else
+					IF CUSTOM_DEBUG Then WScript.echo CStr(bStatus) + " - Inventar_GetBarcodeFromMacAddress Found nothing or multiple!"
+					IF CUSTOM_DEBUG Then Call Job_WriteLog("Custom","DEBUG: Inventar_GetBarcodeFromMacAddress Found nothing or multiple!",True,True)
+					Call Job_ShowMessage("Inventory Database", "This Computer is not registered correctly in the 'Inventory Database'." & vbCrlf & vbCrlf & "Both the serial number and the mac address in the DB is wrong, not existing or returns multiple records. Please correct this!" & vbCrlf & vbCrlf & "Please restart the installation AFTER the DB has been updated!", 0,16,86400)
+				End If
+			Next
+
+			If bStatus Then bStatus=Reg_GetString("HKLM","Software\CapaSystems\tst\Inventar","barcode",True)
+
+			IF CUSTOM_DEBUG Then Wscript.echo CStr(bStatus) + " -- " + gsValue
+			IF CUSTOM_DEBUG Then Call Job_WriteLog("Custom","DEBUG: " + CStr(bStatus) + " -- " + gsValue,True,True)
+			If gsValue <> "" AND IsNumeric(gsValue) Then
+				gsNewComputerName=gsComputerNamePrefix & gsValue
+			Else
+				IF CUSTOM_DEBUG Then Wscript.echo "Computer not found in Inventar database"
+				Call Job_WriteLog("Custom","Custom: Computer not found in Inventar database",True,True)
+			End If
+		End If
+
+		IF CUSTOM_DEBUG Then Call Job_WriteLog("Custom","DEBUG: " + CStr(bStatus) + "gsNewComputerName: '" + gsNewComputerName + "'",True,True)
+		IF CUSTOM_DEBUG Then Wscript.echo CStr(bStatus) + " - gsNewComputerName: '" + gsNewComputerName + "'"
+		If Right(WScript.FullName,11) = "cscript.exe" Then WScript.Echo "gsNewComputerName: '" + gsNewComputerName + "'"
+
+		If bStatus Then bStatus=Inventar_GetADLdapPath(gsInventar_Location)
+        If bStatus=False Then
+            bStatus=True
+            If bStatus Then bStatus=Job_ShowMessage("Inventory Database", "This Computer is not correctly registered in the 'inventory database'. " & vbNewLine & vbNewLine & "Please update computer info in inventory database and restart the reinstallation procedure of this computer.", 0,48,86400)
+        End If
+        If Not(Custom_IsReinstallation()) Then
+            If bStatus Then bStatus=Reg_SetString("HKLM","SOFTWARE\CapaSystems\CapaInstaller\OSD","NewComputerName",gsNewComputerName)
+        End If
+        sRegPath = "Z:\Temp\" + gsNewComputerName
+        If bStatus Then bStatus=File_DelTree(sRegPath,True)
+        If bStatus Then bStatus=File_CreateDirectory(sRegPath)
+        If bStatus Then bStatus=Shell_Execute(gsWindowsDir & "\System32\Reg.exe","Export ""HKLM\SOFTWARE\CapaSystems\tst"" " + sRegPath + "\tst.reg /Y",True,1,True)
+
+        Custom=bStatus
+	End Function
+
+
+    Function showDiskPart()
+        ' Run diskpart
+        set objShell = WScript.CreateObject("WScript.Shell")
+        set objExec = objShell.Exec("diskpart.exe")
+
+        sOutput = ""
+
+        ' Rescan the disks
+        strOutput = ExecuteDiskPartCommand("rescan", objExec)
+'        WScript.echo strOutput
+
+        ' Select the first disk
+        strOutput = ExecuteDiskPartCommand("list disk", objExec)
+
+        arrayLines = Split(strOutput, vbcrlf)
+        for i = LBound(arrayLines) to UBound(arrayLines)
+            If i > 1 Then
+                if arrayLines(i) = "" Then Exit For
+                sOutput = sOutput + arrayLines(i) + vbCrlf
+'                sDisk = Trim(Mid(arrayLines(i), 2, 8))
+'                sStat = Trim(Mid(arrayLines(i), 12, 13))
+'                sSize = Trim(Mid(arrayLines(i), 27, 7))
+'                sFree = Trim(Mid(arrayLines(i), 36, 7))
+
+'                WScript.Echo "Disk.. : " + sDisk
+'                WScript.Echo "Status : " + sStat
+'                WScript.Echo "Size.. : " + sSize
+'                WScript.Echo "Free.. : " + sFree
+'                WScript.Echo
+            End If
+        next
+		' WScript.Echo sOutput
+        ' We can close diskpart
+        objExec.StdIn.Write "exit" & VbCrLf
+    End Function
+
+
+    Function ExecuteDiskPartCommand (strCommand, oExec)
+        ' Run the command we want
+        oExec.StdIn.Write strCommand & VbCrLf
+
+        ' If we read the output now, we will get the one from previous command (?). As we will always
+        ' run a dummy command after every valid command, we can safely ignore this
+        Do While True
+            IgnoreThis = oExec.StdOut.ReadLine & vbcrlf
+            ' Command finishes when diskpart prompt is shown again
+            If InStr(IgnoreThis, "DISKPART>") <> 0 Then Exit Do
+        Loop
+        ' Run a dummy command, so the next time we call this function and try to read output,
+        ' we can safely ignore the result
+        oExec.StdIn.Write VbCrLf
+        ' Read command's output
+        ExecuteDiskPartCommand = ""
+        Do While True
+            ExecuteDiskPartCommand = ExecuteDiskPartCommand & oExec.StdOut.ReadLine & vbcrlf
+            ' Command finishes when diskpart prompt is shown again
+            If InStr(ExecuteDiskPartCommand, "DISKPART>") <> 0 Then Exit Do
+        Loop
+    End Function
+
+    'Begin main
+    bStatus=True
+
+	If bStatus Then bStatus=IncludeScript("customlib.cis")
+	If bStatus Then bStatus=IncludeLibrary("capalib.cin")
+	If bStatus Then bStatus=IncludeLibrary("osdlib.cin")
+	If bStatus Then bStatus=IncludeScript("OSDCustomlib.cis")
+
+    If bStatus Then bStatus=Job_Start("WS","PreGUIScript Script","v1.0","PreGUIScript.Log","INSTALL")
+    If bStatus Then bStatus=OSD_Initialize()
+    If bStatus Then bStatus=Custom()
+
+    bStatus=Job_End(bStatus)
+    'End Main
+
+	</script>
+</job>
