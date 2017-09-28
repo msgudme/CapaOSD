@@ -167,9 +167,9 @@ Function Custom_Check_ModelName()
 
   bStatus=True
   sFunction="Custom_Check_ModelName"
-    If Instr(UCAse(gsImageName),"10") > 0 Then sOsSystem="WINDOWS 10"
-    If Instr(UCAse(gsImageName),"8") > 0 Then sOsSystem="WINDOWS 8"
-    If Instr(UCAse(gsImageName),"7") > 0 Then sOsSystem="WINDOWS 7"
+  If Instr(UCAse(gsImageName),"10") > 0 Then sOsSystem="WINDOWS 10"
+  If Instr(UCAse(gsImageName),"8") > 0 Then sOsSystem="WINDOWS 8"
+  If Instr(UCAse(gsImageName),"7") > 0 Then sOsSystem="WINDOWS 7"
   If Instr(UCAse(gsImageName),"VISTA") > 0 Then sOsSystem="VISTA"
   If Instr(UCAse(gsImageName),"XP") > 0 Then sOsSystem="XP"
   If Instr(UCAse(gsImageName),"2000") > 0 Then sOsSystem="2000"
@@ -214,7 +214,7 @@ End Function
 Function Custom_CopyLogs()
   Dim bStatus, sFunction, sOsSystem
   'Begin
-  	bStatus=True
+	bStatus=True
   sFunction="Custom_CopyLogs"
   Call File_DelTree(gsLogServerFolder & "\" & gsNewComputerName,True)
   Call File_CreateDirectory(gsLogServerFolder & "\" & gsNewComputerName)
