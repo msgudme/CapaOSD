@@ -1,20 +1,6 @@
 msCustomVersion = "v5"
 msCustomBuild = "113"
 
-'--------------------------------------------------------------------------------------------------------------------------------------------------
-'OSD:
-'	D:\CapaSystems\CapaInstaller\OSD\OSDTEST\Kit\extra\program files\capainstaller\client\lib
-'	D:\CapaSystems\CapaInstaller\OSD\OSDTEST\MediaMaster\Kit\extra\program files\capainstaller\client\lib
-'
-'	I System Administration - Højreklik Configuration Management Points\Test\Management Servers\CAPASRV - Update Now
-' - Flyt til Prod:
-'	I Cofiguration Managemet - Højreklik top node Test - Promote... - Husk at fjerne evt. 'haks' i pakker
-'	I System Administration - Højreklik Configuration Management Points\Test\Production\Management Servers\CAPASRV - Update Now
-'
-'	D:\CapaSystems\CapaInstaller\CMP\CMPTest\Resources\CapaInstaller Client\Files\Customlib.cis
-'--------------------------------------------------------------------------------------------------------------------------------------------------
-
-
 Set gdicMacAddress=createobject("Scripting.Dictionary")
 Dim msCustomVersion
 Dim msCustomBuild
