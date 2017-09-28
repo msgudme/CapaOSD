@@ -45,646 +45,642 @@ Dim oLocalCiInit
 Dim oLocalFso
 
 'Begin
-  bStatus=True
-  On Error Resume Next
-  Set oLocalShell=CreateObject("WScript.Shell")
-  Set oLocalCIInit=CreateObject("ciInit.LibInit")
+bStatus=True
+On Error Resume Next
+Set oLocalShell=CreateObject("WScript.Shell")
+Set oLocalCIInit=CreateObject("ciInit.LibInit")
 
-  If Err.number=0 Then
-	sClientDir=oLocalShell.RegRead("HKLM\Software\CapaSystems\CapaInstaller\Client Directory")
-	If (sClientDir<>"") Then
-	  vArr=oLocalCIInit.Convert(CStr(sClientDir & "\Lib\" & sLibrary))
-	  If Err.Number Then
-		Set oLocalFso=CreateObject("Scripting.FileSystemObject")
-		If oLocalFso.FileExists(sClientDir & "\Util\Capamsg.exe") Then
-		  oLocalShell.Run """" & sClientDir & "\Util\Capamsg.exe" & """" & " Trial expired$The trial period has expired. Please obtain a full CapaInstaller Client license.$Exclamation$OK$one$"
-		Else
-		WScript.Echo Err.Description
-		WScript.Sleep 3000
-		END If
-		bStatus=False
-		WScript.Quit 100
-	  END If
-	  If bStatus and Not(IsArray(vArr)) Then bStatus=False
-	  If bStatus Then
-		Redim Preserve vArr(UBound(vArr))
-		sCont=Join(vArr)
-	  End If
-	  ExecuteGlobal sCont
-	  gbEnableHWInventory=True
+If Err.number=0 Then
+sClientDir=oLocalShell.RegRead("HKLM\Software\CapaSystems\CapaInstaller\Client Directory")
+If (sClientDir<>"") Then
+  vArr=oLocalCIInit.Convert(CStr(sClientDir & "\Lib\" & sLibrary))
+  If Err.Number Then
+	Set oLocalFso=CreateObject("Scripting.FileSystemObject")
+	If oLocalFso.FileExists(sClientDir & "\Util\Capamsg.exe") Then
+	  oLocalShell.Run """" & sClientDir & "\Util\Capamsg.exe" & """" & " Trial expired$The trial period has expired. Please obtain a full CapaInstaller Client license.$Exclamation$OK$one$"
 	Else
-	  WScript.Echo "The CapaInstaller Client is not properly installed. Please repair or reinstall."
-	  WScript.Sleep 3000
-	  bStatus=False
-	  WScript.Quit 100
-	End If
-  Else
-	If bStatus Then bStatus=IncludeScript("Includes.cis")
-	If bStatus Then bStatus=IncludeScriptingLibrary("CapaInstaller Scripting Library.cin")
-  End if
-  IncludeLibrary=bStatus
+	WScript.Echo Err.Description
+	WScript.Sleep 3000
+	END If
+	bStatus=False
+	WScript.Quit 100
+  END If
+  If bStatus and Not(IsArray(vArr)) Then bStatus=False
+  If bStatus Then
+	Redim Preserve vArr(UBound(vArr))
+	sCont=Join(vArr)
+  End If
+  ExecuteGlobal sCont
+  gbEnableHWInventory=True
+Else
+  WScript.Echo "The CapaInstaller Client is not properly installed. Please repair or reinstall."
+  WScript.Sleep 3000
+  bStatus=False
+  WScript.Quit 100
+End If
+Else
+If bStatus Then bStatus=IncludeScript("Includes.cis")
+If bStatus Then bStatus=IncludeScriptingLibrary("CapaInstaller Scripting Library.cin")
+End if
+IncludeLibrary=bStatus
 End Function
 
 
-	Private Function CustomInit(sProductid)
-	Dim bStatus
-	Dim bDynContainer
-	'Begin
-	  bStatus=True
-	  On Error resume Next
-	  bDynContainer=False
-	  gbDisplaymsgBox1=False
+Private Function CustomInit(sProductid)
+Dim bStatus
+Dim bDynContainer
+'Begin
+  bStatus=True
+  On Error resume Next
+  bDynContainer=False
+  gbDisplaymsgBox1=False
 
-	  If bStatus Then bStatus=Job_WriteLog("CustomInit", "Version: " & msCustomVersion & " Build: " & msCustomBuild, bStatus, True)
+  If bStatus Then bStatus=Job_WriteLog("CustomInit", "Version: " & msCustomVersion & " Build: " & msCustomBuild, bStatus, True)
 
-	  If bStatus and (gbAMO or gbSDOKS or gbWTS or gbSMSKS or gbGeneric) Then
-		gsPackageRoot=gsPackageRoot & "\" & sProductid
-		If (gsReleaseId<>"") Then gsPackageRoot=gsPackageRoot & "\" & gsReleaseid
-		If gbSMSKS Or gbSDOKS or gbGeneric Then gsPackageRoot=gsPackageRoot & "\Kit"
-	  ElseIf bStatus and (gbSMS or gbSDO) Then
-		gsPackageRoot=Mid(WScript.ScriptFullName,1,Len(WScript.ScriptFullName)-Len(WScript.ScriptName)-1)
-	  ElseIf bStatus and (gbCDM) Then
-		If bStatus Then bStatus=CDM_GetContainer()
-		If bStatus and (gsValue<>"") Then
-		  gsPackageRoot=gsValue
-		  bDynContainer=True
-		End If
+  If bStatus and (gbAMO or gbSDOKS or gbWTS or gbSMSKS or gbGeneric) Then
+	gsPackageRoot=gsPackageRoot & "\" & sProductid
+	If (gsReleaseId<>"") Then gsPackageRoot=gsPackageRoot & "\" & gsReleaseid
+	If gbSMSKS Or gbSDOKS or gbGeneric Then gsPackageRoot=gsPackageRoot & "\Kit"
+  ElseIf bStatus and (gbSMS or gbSDO) Then
+	gsPackageRoot=Mid(WScript.ScriptFullName,1,Len(WScript.ScriptFullName)-Len(WScript.ScriptName)-1)
+  ElseIf bStatus and (gbCDM) Then
+	If bStatus Then bStatus=CDM_GetContainer()
+	If bStatus and (gsValue<>"") Then
+	  gsPackageRoot=gsValue
+	  bDynContainer=True
+	End If
 
-		If Left(lCase(gsPackageRoot),4)<>"http" Then
-		  If gsMode="US" Then
-			gsPackageRoot=gsPackageRoot & "\UserJobs\" & sProductid & "\" & gsReleaseid
-		  Elseif gsMode="WS" Then
-			gsPackageRoot=gsPackageRoot & "\ComputerJobs\" & sProductid & "\" & gsReleaseid
-		  Else
-			gsPackageRoot=gsPackageRoot & "\PocketPCJobs\" & sProductid & "\" & gsReleaseid
-		  End If
-
-		  If bStatus and bDynContainer Then bStatus=File_ExistDir(gsPackageRoot,False)
-		  If bStatus and bDynContainer and Not(gbValue) Then bStatus=CDM_JobRetryLater("Package not avilable on calculated container - Skipping job")
-		  If bStatus and Not(bDynContainer) Then bStatus=File_ExistDir(gsPackageRoot,True)
-		End If
+	If Left(lCase(gsPackageRoot),4)<>"http" Then
+	  If gsMode="US" Then
+		gsPackageRoot=gsPackageRoot & "\UserJobs\" & sProductid & "\" & gsReleaseid
+	  Elseif gsMode="WS" Then
+		gsPackageRoot=gsPackageRoot & "\ComputerJobs\" & sProductid & "\" & gsReleaseid
+	  Else
+		gsPackageRoot=gsPackageRoot & "\PocketPCJobs\" & sProductid & "\" & gsReleaseid
 	  End If
-	  CustomInit=bStatus
-	End Function
+
+	  If bStatus and bDynContainer Then bStatus=File_ExistDir(gsPackageRoot,False)
+	  If bStatus and bDynContainer and Not(gbValue) Then bStatus=CDM_JobRetryLater("Package not avilable on calculated container - Skipping job")
+	  If bStatus and Not(bDynContainer) Then bStatus=File_ExistDir(gsPackageRoot,True)
+	End If
+  End If
+  CustomInit=bStatus
+End Function
 
 
 '************** Inventar database functions *****************************
 
 
-	Private Function Inventar_Install_MySQL_ODBCDrivers()
-		Dim bStatus
-		bStatus=True
-		Call Job_WriteLog("Inventar_Install_MySQL_ODBCDrivers","Inventar_Install_MySQL_ODBCDrivers: Function Start.",bStatus,True)
-		Call OSD_UpdateCustomMessage("Installing database drivers...")
-		sODBC="z:\Scripts"
-		If bStatus Then bStatus=File_ExistDir("x:\Windows\syswow64",False)
+Private Function Inventar_Install_MySQL_ODBCDrivers()
+	Dim bStatus
+	bStatus=True
+	Call Job_WriteLog("Inventar_Install_MySQL_ODBCDrivers","Inventar_Install_MySQL_ODBCDrivers: Function Start.",bStatus,True)
+	Call OSD_UpdateCustomMessage("Installing database drivers...")
+	sODBC="z:\Scripts"
+	If bStatus Then bStatus=File_ExistDir("x:\Windows\syswow64",False)
 
-		If bStatus And not(gbValue) Then
-			sODBCBinDir=sODBC & "\mysql-connector-odbc-noinstall-3.51.29-win32\bin"
-			sODBCLibDir=sODBC & "\mysql-connector-odbc-noinstall-3.51.29-win32\lib"
-		Else
-			sODBCBinDir=sODBC & "\mysql-connector-odbc-noinstall-3.51.29-winx64\bin"
-			sODBCLibDir=sODBC & "\mysql-connector-odbc-noinstall-3.51.29-winx64\lib"
-		End If
-		sWinpeSystemDir="x:\Windows\System32"
+	If bStatus And not(gbValue) Then
+		sODBCBinDir=sODBC & "\mysql-connector-odbc-noinstall-3.51.29-win32\bin"
+		sODBCLibDir=sODBC & "\mysql-connector-odbc-noinstall-3.51.29-win32\lib"
+	Else
+		sODBCBinDir=sODBC & "\mysql-connector-odbc-noinstall-3.51.29-winx64\bin"
+		sODBCLibDir=sODBC & "\mysql-connector-odbc-noinstall-3.51.29-winx64\lib"
+	End If
+	sWinpeSystemDir="x:\Windows\System32"
 
-		If bStatus Then bStatus=File_CopyFile(sODBCLibDir & "\myodbc3S.dll", sWinpeSystemDir & "\myodbc3S.dll",True)
-		If bStatus Then bStatus=File_CopyFile(sODBCLibDir & "\myodbc3S.lib", sWinpeSystemDir & "\myodbc3S.lib",True)
-		If bStatus Then bStatus=File_CopyFile(sODBCLibDir & "\myodbc3.dll", sWinpeSystemDir & "\myodbc3.dll",True)
-		If bStatus Then bStatus=File_CopyFile(sODBCLibDir & "\myodbc3.lib", sWinpeSystemDir & "\myodbc3.lib",True)
-		If bStatus Then bStatus=File_CopyFile(sODBCBinDir & "\myodbc3i.exe", sWinpeSystemDir & "\myodbc3i.exe",True)
-		If bStatus Then bStatus=File_CopyFile(sODBCBinDir & "\myodbc3m.exe", sWinpeSystemDir & "\myodbc3m.exe",True)
-		sRun=sWinpeSystemDir & "\myodbc3i.exe"
-		sParam="-a -d -t""MySQL ODBC 3.51 Driver;DRIVER=" & sWinpeSystemDir & "\myodbc3.dll;SETUP=" & sWinpeSystemDir & "\myodbc3S.dll"""
-		If bStatus Then bStatus=Shell_Execute(sWinpeSystemDir & "\cmd.exe","/C " & sRun & " " & sParam,True,4,True)
-		If giErrorLevel<>0 Then
-			Call Job_WriteLog("Inventar_Install_MySQL_ODBCDrivers","Inventar_Install_MySQL_ODBCDrivers: Unknown Error Installing MySQL ODBC",bStatus,True)
-			bStatus=False
-		End If
-		Call Job_WriteLog("Inventar_Install_MySQL_ODBCDrivers","Inventar_Install_MySQL_ODBCDrivers: Function End.",bStatus,True)
-		Inventar_Install_MySQL_ODBCDrivers=bStatus
-	End Function
+	If bStatus Then bStatus=File_CopyFile(sODBCLibDir & "\myodbc3S.dll", sWinpeSystemDir & "\myodbc3S.dll",True)
+	If bStatus Then bStatus=File_CopyFile(sODBCLibDir & "\myodbc3S.lib", sWinpeSystemDir & "\myodbc3S.lib",True)
+	If bStatus Then bStatus=File_CopyFile(sODBCLibDir & "\myodbc3.dll", sWinpeSystemDir & "\myodbc3.dll",True)
+	If bStatus Then bStatus=File_CopyFile(sODBCLibDir & "\myodbc3.lib", sWinpeSystemDir & "\myodbc3.lib",True)
+	If bStatus Then bStatus=File_CopyFile(sODBCBinDir & "\myodbc3i.exe", sWinpeSystemDir & "\myodbc3i.exe",True)
+	If bStatus Then bStatus=File_CopyFile(sODBCBinDir & "\myodbc3m.exe", sWinpeSystemDir & "\myodbc3m.exe",True)
+	sRun=sWinpeSystemDir & "\myodbc3i.exe"
+	sParam="-a -d -t""MySQL ODBC 3.51 Driver;DRIVER=" & sWinpeSystemDir & "\myodbc3.dll;SETUP=" & sWinpeSystemDir & "\myodbc3S.dll"""
+	If bStatus Then bStatus=Shell_Execute(sWinpeSystemDir & "\cmd.exe","/C " & sRun & " " & sParam,True,4,True)
+	If giErrorLevel<>0 Then
+		Call Job_WriteLog("Inventar_Install_MySQL_ODBCDrivers","Inventar_Install_MySQL_ODBCDrivers: Unknown Error Installing MySQL ODBC",bStatus,True)
+		bStatus=False
+	End If
+	Call Job_WriteLog("Inventar_Install_MySQL_ODBCDrivers","Inventar_Install_MySQL_ODBCDrivers: Function End.",bStatus,True)
+	Inventar_Install_MySQL_ODBCDrivers=bStatus
+End Function
 
 
-	'***********************************************
+'***********************************************
 
-	Private Function Inventar_ConnectToDatabase()
-		On Error Resume Next
-		Dim bStatus
-		bStatus=True
-		Err.Clear
-		Call Job_WriteLog("Inventar_ConnectToDatabase","Inventar_ConnectToDatabase: Function Start.",bStatus,True)
-		Call OSD_UpdateCustomMessage("Connecting to database...")
-		gstrConnString="DRIVER={MySQL ODBC 3.51 Driver}; SERVER=admmysql; DATABASE=inventory; UID=inventory;PASSWORD=NewShh!; OPTION=3; Allow Zero Datetime=True"
-		Set gobjConnection=CreateObject("ADODB.Connection")
+Private Function Inventar_ConnectToDatabase()
+	On Error Resume Next
+	Dim bStatus
+	bStatus=True
+	Err.Clear
+	Call Job_WriteLog("Inventar_ConnectToDatabase","Inventar_ConnectToDatabase: Function Start.",bStatus,True)
+	Call OSD_UpdateCustomMessage("Connecting to database...")
+	gstrConnString="DRIVER={MySQL ODBC 3.51 Driver}; SERVER=admmysql; DATABASE=inventory; UID=inventory;PASSWORD=NewShh!; OPTION=3; Allow Zero Datetime=True"
+	Set gobjConnection=CreateObject("ADODB.Connection")
+	gobjConnection.Open gstrConnString
+	Dim i:i=0
+	While Err.Number<>0 AND i<4
+		i=i+1
+		Call OSD_UpdateCustomMessage("Error Connecting to database, retrying...")
+		Call Sys_Sleep(5)
 		gobjConnection.Open gstrConnString
-		Dim i:i=0
-		While Err.Number<>0 AND i<4
-			i=i+1
-			Call OSD_UpdateCustomMessage("Error Connecting to database, retrying...")
-			Call Sys_Sleep(5)
-			gobjConnection.Open gstrConnString
-		Wend
-		If Err.Number <> 0 Then
-			bStatus=False
-			Call Job_WriteLog("Inventar_ConnectToDatabase","Inventar_ConnectToDatabase: Error Connecting to Database Server. ErrorNumber=" & Err.Number & " ErrorDescription=" & Err.Description & " ErrorSource=" & Err.Source,bStatus,True)
-			Err.Clear
-		End If
-		Call Job_WriteLog("Inventar_ConnectToDatabase","Inventar_ConnectToDatabase: Function End.",bStatus,True)
-		Inventar_ConnectToDatabase=bStatus
-	End Function
-
-
-	'***********************************************
-
-	Private Function Inventar_GetBarcodeFromSerialNumber(sSerialNumber)
-		On Error Resume Next
-		Dim bStatus
-		bStatus=True
-		Dim sBarCode:sBarCode=""
-		Call Job_WriteLog("Inventar_GetBarcodeFromSerialNumber","Inventar_GetBarcodeFromSerialNumber: Function Start. Input 1=" & sSerialNumber,bStatus,True)
-		Call OSD_UpdateCustomMessage("Reading info from database...")
-		Set objRecordset = CreateObject("ADODB.Recordset")
-		'declare the SQL statement that will query the database
-		strSQLQuery = "SELECT * FROM inventory WHERE serial_number LIKE '%" & sSerialNumber & "%'"
-		Call Job_WriteLog("Inventar_GetBarcodeFromSerialNumber","Inventar_GetBarcodeFromSerialNumber: SQL Query '" & strSQLQuery & "'",True,False)
-		'WScript.Echo "Inventar_GetBarcodeFromSerialNumber: SQL Query '" & strSQLQuery & "'"
-		Set objRecordset = gobjConnection.Execute(strSQLQuery)
-		If Err.Number <> 0 Then
-			bStatus=False
-			Call Job_WriteLog("Inventar_GetBarcodeFromSerialNumber","Inventar_GetBarcodeFromSerialNumber: Error Execute Query to Database Server. ErrorNumber=" & Err.Number & " ErrorDescription=" & Err.Description & " ErrorSource=" & Err.Source,bStatus,True)
-			Err.Clear
-		End If
-		'first of all determine whether there are any records
-		If objRecordset.EOF Then
-			Call Job_WriteLog("Inventar_GetBarcodeFromSerialNumber","Inventar_GetBarcodeFromSerialNumber:No Data Found.",bStatus,True)
-			'WScript.Echo "Inventar_GetBarcodeFromSerialNumber:No Data Found.",bStatus,True)
-		Else
-			'if there are records then loop through the fields
-			iCnt=0
-			Do While NOT objRecordset.Eof
-				'WScript.Echo "iCnt s: " + CStr(iCnt)
-				sBarCode=CStr(objRecordset("barcode"))
-				sLocation=CStr(objRecordset("location"))
-				sLocationPerson=CStr(objRecordset("location_person"))
-				sMacAddress=CStr(objRecordset("mac_address"))
-				sSerialNumber=CStr(objRecordset("serial_number"))
-				sLastControl=CStr(objRecordset("last_control"))
-				If iCnt > 0 Then
-					'WScript.Echo "Multiple serials!"
-					sBarCode="Multiple"
-					sMacAddress="serial"
-					Call Job_WriteLog("Inventar_GetBarcodeFromSerialNumber","Inventar_GetBarcodeFromSerialNumber: Found record # " & CStr(iCnt),bStatus,True)
-				End If
-				If bStatus Then bStatus=Reg_SetString("HKLM","Software\CapaSystems\tst\Inventar","barcode",sBarCode)
-				If bStatus Then bStatus=Reg_SetString("HKLM","Software\CapaSystems\tst\Inventar","location",sLocation)
-				If bStatus Then bStatus=Reg_SetString("HKLM","Software\CapaSystems\tst\Inventar","location_person",sLocationPerson)
-				If bStatus Then bStatus=Reg_SetString("HKLM","Software\CapaSystems\tst\Inventar","mac_address",sMacAddress)
-				If bStatus Then bStatus=Reg_SetString("HKLM","Software\CapaSystems\tst\Inventar","serial_number",sSerialNumber)
-				If bStatus Then bStatus=Reg_SetString("HKLM","Software\CapaSystems\tst\Inventar","last_control",sLastControl)
-				gsInventar_BarCode=sBarCode
-				gsInventar_Location=sLocation
-				gsInventar_LocationPerson=sLocationPerson
-				gsInventar_MacAddress=sMacAddress
-				gsInventar_SerialNumber=sSerialNumber
-				gsInventar_LastControl=sLastControl
-				Call Job_WriteLog("Inventar_GetBarcodeFromSerialNumber","Inventar_GetBarcodeFromSerialNumber: Found Data barcode=" & sBarCode,bStatus,True)
-				Call Job_WriteLog("Inventar_GetBarcodeFromSerialNumber","Inventar_GetBarcodeFromSerialNumber: Found Data location=" & sLocation,bStatus,True)
-				Call Job_WriteLog("Inventar_GetBarcodeFromSerialNumber","Inventar_GetBarcodeFromSerialNumber: Found Data location_person=" & sLocationPerson,bStatus,True)
-				Call Job_WriteLog("Inventar_GetBarcodeFromSerialNumber","Inventar_GetBarcodeFromSerialNumber: Found Data mac_address=" & sMacAddress,bStatus,True)
-				Call Job_WriteLog("Inventar_GetBarcodeFromSerialNumber","Inventar_GetBarcodeFromSerialNumber: Found Data serial_number=" & sSerialNumber,bStatus,True)
-				Call Job_WriteLog("Inventar_GetBarcodeFromSerialNumber","Inventar_GetBarcodeFromSerialNumber: Found Data last_control=" & sLastControl,bStatus,True)
-				'WScript.Echo "Inventar_GetBarcodeFromSerialNumber: Found Data barcode=" & sBarCode,bStatus,True)'
-				'WScript.Echo "Inventar_GetBarcodeFromSerialNumber: Found Data location=" & sLocation,bStatus,True)
-				'WScript.Echo "Inventar_GetBarcodeFromSerialNumber: Found Data location_person=" & sLocationPerson,bStatus,True)'
-				'WScript.Echo "Inventar_GetBarcodeFromSerialNumber: Found Data mac_address=" & sMacAddress,bStatus,True)'
-				'WScript.Echo "Inventar_GetBarcodeFromSerialNumber: Found Data serial_number=" & sSerialNumber,bStatus,True)
-				'WScript.Echo "Inventar_GetBarcodeFromSerialNumber: Found Data last_control=" & sLastControl,bStatus,True)
-				If iCnt > 0 Then
-				  Call Job_WriteLog("Inventar_GetBarcodeFromSerialNumber","More than one record found for SN: " + sSerialNumber,bStatus,True)
-				  'objRecordset.MoveLast
-				End If
-				iCnt=iCnt+1
-				objRecordset.MoveNext
-			Loop
-		End If
-
-		If iCnt > 1 Then
-'			bStatus=Reg_SetString("HKLM","Software\CapaSystems\tst\Inventar","barcode","Multiple")
-			Call Job_WriteLog("Inventar_GetBarcodeFromSerialNumber","Inventar_GetBarcodeFromSerialNumberreturns more than one hit on serial : '" + Cstr(sSerialNumber) + "'",bStatus,True)
-		End If
-		Call Job_WriteLog("Inventar_GetBarcodeFromSerialNumber","Inventar_GetBarcodeFromSerialNumber: Function End. Returns=" & Cstr(bStatus),bStatus,True)
-		sKeyPath=sBarCode
-		Inventar_GetBarcodeFromSerialNumber=bStatus
-	End Function
-
-
-	'***********************************************
-
-	Private Function Inventar_GetBarcodeFromMacAddress(sMacAddress)
-		On Error Resume Next
-		Dim bStatus
-		bStatus=True
-		Dim sBarCode:sBarCode=""
-		Call Job_WriteLog("Inventar_GetBarcodeFromMacAddress","Inventar_GetBarcodeFromMacAddress: Function Start. Input 1=" & sMacAddress,bStatus,True)
-		Call OSD_UpdateCustomMessage("Reading info from database...")
-		Set objRecordset = CreateObject("ADODB.Recordset")
-		'wscript.echo sMacAddress
-		sMacAddress=cCharsInsertEvery("[-: ]?",sMacAddress,2,False,False)
-		'wscript.echo sMacAddress
-		'declare the SQL statement that will query the database
-		strSQLQuery = "SELECT * FROM inventory WHERE mac_address REGEXP '" & sMacAddress & "'"
-		Call Job_WriteLog("Inventar_GetBarcodeFromMacAddress","Inventar_GetBarcodeFromMacAddress: SQL Query '" & strSQLQuery & "'",True,False)
-		Set objRecordset = gobjConnection.Execute(strSQLQuery)
-		If Err.Number <> 0 Then
-			bStatus=False
-			Call Job_WriteLog("Inventar_GetBarcodeFromMacAddress","Inventar_GetBarcodeFromMacAddress: Error Execute Query to Database Server. ErrorNumber=" & Err.Number & " ErrorDescription=" & Err.Description & " ErrorSource=" & Err.Source,bStatus,True)
-			Err.Clear
-		End If
-		'first of all determine whether there are any records
-		If objRecordset.EOF Then
-			Call Job_WriteLog("Inventar_GetBarcodeFromMacAddress","Inventar_GetBarcodeFromMacAddress:No Data Found.",bStatus,True)
-		Else
-			'if there are records then loop through the fields
-			iCnt=0
-			Do While NOT objRecordset.Eof
-				'WScript.Echo "iCnt m: " + CStr(iCnt)
-				sBarCode=CStr(objRecordset("barcode"))
-				sLocation=CStr(objRecordset("location"))
-				sLocationPerson=CStr(objRecordset("location_person"))
-				sMacAddress=CStr(objRecordset("mac_address"))
-				sSerialNumber=CStr(objRecordset("serial_number"))
-				sLastControl=CStr(objRecordset("last_control"))
-				If iCnt > 0 Then
-					'WScript.Echo "Multiple mac's!"
-					sBarCode="!!!!!!"
-					sMacAddress="mac_address"
-					Call Job_WriteLog("Inventar_GetBarcodeFromMacAddress","Inventar_GetBarcodeFromMacAddress: Found record # " & CStr(iCnt),bStatus,True)
-				End If
-				If bStatus Then bStatus=Reg_SetString("HKLM","Software\CapaSystems\tst\Inventar","barcode",sBarCode)
-				If bStatus Then bStatus=Reg_SetString("HKLM","Software\CapaSystems\tst\Inventar","location",sLocation)
-				If bStatus Then bStatus=Reg_SetString("HKLM","Software\CapaSystems\tst\Inventar","location_person",sLocationPerson)
-				If bStatus Then bStatus=Reg_SetString("HKLM","Software\CapaSystems\tst\Inventar","mac_address",sMacAddress)
-				If bStatus Then bStatus=Reg_SetString("HKLM","Software\CapaSystems\tst\Inventar","serial_number",sSerialNumber)
-				If bStatus Then bStatus=Reg_SetString("HKLM","Software\CapaSystems\tst\Inventar","last_control",sLastControl)
-				gsInventar_BarCode=sBarCode
-				gsInventar_Location=sLocation
-				gsInventar_LocationPerson=sLocationPerson
-				gsInventar_MacAddress=sMacAddress
-				gsInventar_SerialNumber=sSerialNumber
-				gsInventar_LastControl=sLastControl
-				Call Job_WriteLog("Inventar_GetBarcodeFromMacAddress","Inventar_GetBarcodeFromMacAddress: Found Data barcode=" & sBarCode,bStatus,True)
-				Call Job_WriteLog("Inventar_GetBarcodeFromMacAddress","Inventar_GetBarcodeFromMacAddress: Found Data location=" & sLocation,bStatus,True)
-				Call Job_WriteLog("Inventar_GetBarcodeFromMacAddress","Inventar_GetBarcodeFromMacAddress: Found Data location_person=" & sLocationPerson,bStatus,True)
-				Call Job_WriteLog("Inventar_GetBarcodeFromMacAddress","Inventar_GetBarcodeFromMacAddress: Found Data mac_address=" & sMacAddress,bStatus,True)
-				Call Job_WriteLog("Inventar_GetBarcodeFromMacAddress","Inventar_GetBarcodeFromMacAddress: Found Data serial_number=" & sSerialNumber,bStatus,True)
-				Call Job_WriteLog("Inventar_GetBarcodeFromMacAddress","Inventar_GetBarcodeFromMacAddress: Found Data last_control=" & sLastControl,bStatus,True)
-				iCnt=iCnt+1
-				objRecordset.MoveNext
-				If iCnt > 0 Then
-				  Call Job_WriteLog("Inventar_GetBarcodeFromMacAddress","More than one record found for MAC: " + sMacAddress,bStatus,True)
-				  break
-				End If
-			Loop
-		End If
-		If iCnt > 1 Then
-			Call Job_WriteLog("Inventar_GetBarcodeFromMacAddress","Inventar_GetBarcodeFromMacAddress - more than one hit on mac address : '" + Cstr(sMacAddress) + "'",bStatus,True)
-		End If
-		Call Job_WriteLog("Inventar_GetBarcodeFromMacAddress","Inventar_GetBarcodeFromMacAddress: Function End. Returns=" & Cstr(bStatus),bStatus,True)
-		sKeyPath=sBarCode
-		Inventar_GetBarcodeFromMacAddress=bStatus
-	End Function
-
-
-	'***********************************************
-
-	Private Function Inventar_GetDataFromRegistry()
-		Dim bStatus
-		bStatus=True
-		Call Job_WriteLog("Inventar_GetDataFromRegistry","Inventar_GetDataFromRegistry:Getting inventar data from registry and update global variables",True,True)
-		If bStatus Then bStatus=Reg_GetString("HKLM","Software\CapaSystems\tst\Inventar","barcode",True)
-		If bStatus And sKeyPath<>"" Then gsInventar_BarCode=sKeyPath
-		If bStatus Then bStatus=Reg_GetString("HKLM","Software\CapaSystems\tst\Inventar","location",True)
-		If bStatus And sKeyPath<>"" Then gsInventar_Location=sKeyPath
-		If bStatus Then bStatus=Reg_GetString("HKLM","Software\CapaSystems\tst\Inventar","location_person",True)
-		If bStatus And sKeyPath<>"" Then gsInventar_LocationPerson=sKeyPath
-		If bStatus Then bStatus=Reg_GetString("HKLM","Software\CapaSystems\tst\Inventar","mac_address",True)
-		If bStatus And sKeyPath<>"" Then gsInventar_MacAddress=sKeyPath
-		If bStatus Then bStatus=Reg_GetString("HKLM","Software\CapaSystems\tst\Inventar","serial_number",True)
-		If bStatus And sKeyPath<>"" Then gsInventar_SerialNumber=sKeyPath
-		If bStatus Then bStatus=Reg_GetString("HKLM","Software\CapaSystems\tst\Inventar","last_control",True)
-		If bStatus And sKeyPath<>"" Then gsInventar_LastControl=sKeyPath
-		Call Job_WriteLog("Inventar_GetDataFromRegistry","Inventar_GetDataFromRegistry: End",True,True)
-		Inventar_GetDataFromRegistry=bStatus
-	End Function
-
-
-	'***********************************************
-
-	Private Function Inventar_WriteDataToRegistryHive()
-		Dim bStatus
-		bstatus=True
-		sWindowsDrive=""
-		If bStatus Then bStatus=Job_WriteLog("Inventar_WriteDataToRegistryHive","Loading default hive to HKU\TempHive",bStatus,False)
-		'Locate the os drive
-		gbValue=False
-		If bStatus and gbValue=false Then bStatus=File_ExistDir("c:\Windows\System32\config",False):if gbValue=true then sWindowsDrive="c:"
-		If bStatus and gbValue=false Then bStatus=File_ExistDir("d:\Windows\System32\config",False):if gbValue=true then sWindowsDrive="d:"
-		If bStatus and gbValue=false Then bStatus=File_ExistDir("e:\Windows\System32\config",False):if gbValue=true then sWindowsDrive="e:"
-		If bStatus and gbValue=false Then bStatus=Job_WriteLog("Inventar_WriteDataToRegistryHive","Could not find windows registry",bStatus,False)
-
-		If bStatus Then bStatus=Inventar_GetDataFromRegistry()
-		If bStatus Then bStatus=Shell_Execute("cmd.exe","/c reg load HKLM\TempHive " & sWindowsDrive & "\Windows\System32\config\software",True,0,False)
-		If bStatus Then bStatus=Job_WriteLog("Inventar_WriteDataToRegistryHive","Writing Inventar data to registry hive...",bStatus,False)
-		If bStatus Then bStatus=Reg_SetString("HKLM","TempHive\CapaSystems\tst\Inventar","barcode",gsInventar_BarCode)
-		If bStatus Then bStatus=Reg_SetString("HKLM","TempHive\CapaSystems\tst\Inventar","location",gsInventar_Location)
-		If bStatus Then bStatus=Reg_SetString("HKLM","TempHive\CapaSystems\tst\Inventar","location_person",gsInventar_LocationPerson)
-		If bStatus Then bStatus=Reg_SetString("HKLM","TempHive\CapaSystems\tst\Inventar","mac_address",gsInventar_MacAddress)
-		If bStatus Then bStatus=Reg_SetString("HKLM","TempHive\CapaSystems\tst\Inventar","serial_number",gsInventar_SerialNumber)
-		If bStatus Then bStatus=Reg_SetString("HKLM","TempHive\CapaSystems\tst\Inventar","last_control",gsInventar_LastControl)
-		If bStatus Then bStatus=Reg_GetString("HKLM","Software\CapaSystems\tst\OSD","LdapDestination",True) ' get from winpe registry
-		If bStatus And sKeyPath<>"" Then sOU=sKeyPath
-		If bStatus Then bStatus=Reg_SetString("HKLM","TempHive\CapaSystems\tst\OSD","LdapDestination",sOU)
-		If bStatus Then bStatus=Job_WriteLog("Inventar_WriteDataToRegistryHive","Unloading default hive",bStatus,False)
-		If bStatus Then bStatus=Shell_Execute("cmd.exe","/c reg unload HKLM\TempHive",True,0,False)
-		Inventar_WriteDataToRegistryHive=True
-	End Function
-
-
-	'***********************************************
-
-	Function Inventar_GetADLdapPath(sLocation)
-		Const sClass	    = "0A17,0A27,2A12,2A14,2A18,2A20,2A50,2A52,2A54,3A12,3A14,3A18,3A50,3A52,4A14,4A16,4A20,4A22,4A30,4A54,4A56,4A58,5A14"
-		Const sAditorium    = "0A11,0A35,2A56,4A60"
-		Const sGrouproom    = "2A30,2A58,2A60,3A58,3A60,4A34,4A44,4A46,4A62,4A64,5A20,5A22"
-		Const sBalkony	    = "2A44,3A44,4A48"
-		Const sLibrary	    = "0B01,0B11"							' 0B01 old, 0B11 new
-		Const sOthers		= "0A03,0A07,0A09,2A28,2A30,3A54,5A56"	' Exceptions like Reception, PitLab, etc.
-
-		Dim bStatus:bStatus=True
-
-
-		Call Job_WriteLog("Inventar_GetADLdapPath","Inventar_GetADLdapPath: Inventory Location Number='" & sLocation & "'",bStatus,True)
-		sKeyPath=""
-		sParent = ""			' Parent(s)
-		sLocationArea = ""
-		sOU = "Others"
-		If Len(sLocation) = 6 Then
-			sTyp = Left(sLocation, 2)
-			sFloor = Mid(sLocation, 3, 1)
-			sLocationArea = Mid(sLocation, 4, 1)
-			sOffice = Right(sLocation, 2)
-			If sTyp = "99" Then
-				Select Case sLocationArea
-					Case "1" sLocationArea = "A"
-					Case "2" sLocationArea = "B"
-					Case "3" sLocationArea = "C"
-					Case "4" sLocationArea = "D"
-					Case "5" sLocationArea = "E"
-					Case "8" sLocationArea = "M"		' Old Mikado House - should not happen!
-				End Select
-				If sLocationArea = "A" AND Not(sFloor = 9) Then			' 9 = cellar
-					sOU = CStr(sFloor) & sLocationArea & CStr(sOffice)
-				Else
-				   If sLocationArea = "E" AND sFloor = 4 Then sOU = sOU '    "4E" old gamelab'ish thingie
-				End If
-			End If
-			sParent = ""
-			Call Job_WriteLog("Inventar_GetADLdapPath","Inventar_GetADLdapPath: Converting ou '" & sOU & "' to LDAP.",bStatus,True)
-			If InStr(sClass, sOU) > 0 Then
-				sParent ="OU=" + sOU + ",OU=Class,OU=Classroom,OU=Facilities"
-			ElseIf InStr(sAditorium, sOU) > 0 Then
-				sParent ="OU=" + sOU + ",OU=Auditorium,OU=Classroom,OU=Facilities"
-			ElseIf InStr(sBalkony, sOU) > 0 Then
-				sParent ="OU=" + sOU + ",OU=Balkony,OU=Common,OU=Facilities"
-			ElseIf InStr(sGrouproom, sOU) > 0 Then
-				sParent ="OU=" + sOU + ",OU=Grouproom,OU=Common,OU=Facilities"
-			ElseIf InStr(sLibrary, sOU) > 0 Then
-				sParent ="OU=" + sOU + ",OU=Library,OU=Common,OU=Facilities"
-			ElseIf InStr(sOthers, sOU) > 0 Then
-				sParent ="OU=Others"
-			Else
-				sParent ="OU=Others"
-				'Call Job_WriteLog("Inventar_GetADLdapPath","Inventar_GetADLdapPath: Inventar number not valid. Error 1",bStatus,True)
-			End If
-		Else
-			Call Job_WriteLog("Inventar_GetADLdapPath","Inventar_GetADLdapPath: Inventar number not valid. Error 2",bStatus,True)
-			sParent="OU=Inventory Error"
-			bStatus=False
-		End If
-		'Exceptions find invalid inventory data
-		If Left(sLocation, 3) = "999" Then
-			Call Job_WriteLog("Inventar_GetADLdapPath","Inventar_GetADLdapPath: Inventar number not valid. Error 3",bStatus,True)
-			sParent="OU=Inventory Error"
-			bStatus=False
-		End If
-		sKeyPath=sParent
-		'If bStatus Then bStatus=Reg_SetString("HKLM","Software\CapaSystems\tst\OU","LdapDestination",sParent & "," & gsDestinationOULdap)
-		If bStatus Then bStatus=Reg_SetString("HKLM","Software\CapaSystems\tst\OSD","LdapDestination",sParent & "," & gsDestinationOULdap)
-		' Call Job_WriteLog("Inventar_GetADLdapPath","Inventar_GetADLdapPath: Returning='" & sKeyPath & "'",bStatus,True)
-		Inventar_GetADLdapPath=bStatus
-	End Function
-
-
-	Function cCharsInsertEvery(sInsert,sTarget,nEvery,bStart,bEnd)
-	' -------------------------------------------------------------------
-	'               sInsert : What's to be inserted
-	'               sTarget : Target for insert
-	'               nEvery  : Insert for every n'th character
-	'               bStart  : If true also insert at start of target
-	'               bEnd    : If true also insert at end of target
-	' -------------------------------------------------------------------
-			If bStart then sOut = sInsert else sOut = ""
-			while len(sTarget) > 0
-
-					sPart = Left(sTarget,nEvery)
-					sTarget = Mid(sTarget,nEvery+1)
-					sOut = sOut + sPart + sInsert
-
-			WEnd
-			If Not bEnd Then sOut = Left(sOut, Len(sOut) - Len(sInsert))
-			cCharsInsertEvery = sOut
-	End Function
-
-	'********************* Custom Network functiions
-
-	Private Function Custom_Network_GetMacAddress()
-		Dim bStatus
-		bStatus=True
+	Wend
+	If Err.Number <> 0 Then
+		bStatus=False
+		Call Job_WriteLog("Inventar_ConnectToDatabase","Inventar_ConnectToDatabase: Error Connecting to Database Server. ErrorNumber=" & Err.Number & " ErrorDescription=" & Err.Description & " ErrorSource=" & Err.Source,bStatus,True)
 		Err.Clear
-		gdicMacAddress.RemoveAll
-		Set objWMIService = GetObject("winmgmts:\\.\root\cimv2")
-		Set colItems = objWMIService.ExecQuery("Select * From Win32_NetworkAdapterConfiguration Where IPEnabled = True")
-		strComputer = "."
-		Set objWMIService = GetObject("winmgmts:\\.\root\cimv2")
-		Set colItems = objWMIService.ExecQuery("Select * From Win32_NetworkAdapter")
-		If Err.Number <> 0 Then
-			bStatus=False
-			Call Job_WriteLog("Custom_Network_GetMacAddress","Custom_Network_GetMacAddress: Error Connecting using WMI. ErrorNumber=" & Err.Number & " ErrorDescription=" & Err.Description & " ErrorSource=" & Err.Source,bStatus,True)
-			Err.Clear
+	End If
+	Call Job_WriteLog("Inventar_ConnectToDatabase","Inventar_ConnectToDatabase: Function End.",bStatus,True)
+	Inventar_ConnectToDatabase=bStatus
+End Function
+
+
+'***********************************************
+
+Private Function Inventar_GetBarcodeFromSerialNumber(sSerialNumber)
+	On Error Resume Next
+	Dim bStatus
+	bStatus=True
+	Dim sBarCode:sBarCode=""
+	Call Job_WriteLog("Inventar_GetBarcodeFromSerialNumber","Inventar_GetBarcodeFromSerialNumber: Function Start. Input 1=" & sSerialNumber,bStatus,True)
+	Call OSD_UpdateCustomMessage("Reading info from database...")
+	Set objRecordset = CreateObject("ADODB.Recordset")
+	'declare the SQL statement that will query the database
+	strSQLQuery = "SELECT * FROM inventory WHERE serial_number LIKE '%" & sSerialNumber & "%'"
+	Call Job_WriteLog("Inventar_GetBarcodeFromSerialNumber","Inventar_GetBarcodeFromSerialNumber: SQL Query '" & strSQLQuery & "'",True,False)
+	'WScript.Echo "Inventar_GetBarcodeFromSerialNumber: SQL Query '" & strSQLQuery & "'"
+	Set objRecordset = gobjConnection.Execute(strSQLQuery)
+	If Err.Number <> 0 Then
+		bStatus=False
+		Call Job_WriteLog("Inventar_GetBarcodeFromSerialNumber","Inventar_GetBarcodeFromSerialNumber: Error Execute Query to Database Server. ErrorNumber=" & Err.Number & " ErrorDescription=" & Err.Description & " ErrorSource=" & Err.Source,bStatus,True)
+		Err.Clear
+	End If
+	'first of all determine whether there are any records
+	If objRecordset.EOF Then
+		Call Job_WriteLog("Inventar_GetBarcodeFromSerialNumber","Inventar_GetBarcodeFromSerialNumber:No Data Found.",bStatus,True)
+		'WScript.Echo "Inventar_GetBarcodeFromSerialNumber:No Data Found.",bStatus,True)
+	Else
+		'if there are records then loop through the fields
+		iCnt=0
+		Do While NOT objRecordset.Eof
+			'WScript.Echo "iCnt s: " + CStr(iCnt)
+			sBarCode=CStr(objRecordset("barcode"))
+			sLocation=CStr(objRecordset("location"))
+			sLocationPerson=CStr(objRecordset("location_person"))
+			sMacAddress=CStr(objRecordset("mac_address"))
+			sSerialNumber=CStr(objRecordset("serial_number"))
+			sLastControl=CStr(objRecordset("last_control"))
+			If iCnt > 0 Then
+				'WScript.Echo "Multiple serials!"
+				sBarCode="Multiple"
+				sMacAddress="serial"
+				Call Job_WriteLog("Inventar_GetBarcodeFromSerialNumber","Inventar_GetBarcodeFromSerialNumber: Found record # " & CStr(iCnt),bStatus,True)
+			End If
+			If bStatus Then bStatus=Reg_SetString("HKLM","Software\CapaSystems\tst\Inventar","barcode",sBarCode)
+			If bStatus Then bStatus=Reg_SetString("HKLM","Software\CapaSystems\tst\Inventar","location",sLocation)
+			If bStatus Then bStatus=Reg_SetString("HKLM","Software\CapaSystems\tst\Inventar","location_person",sLocationPerson)
+			If bStatus Then bStatus=Reg_SetString("HKLM","Software\CapaSystems\tst\Inventar","mac_address",sMacAddress)
+			If bStatus Then bStatus=Reg_SetString("HKLM","Software\CapaSystems\tst\Inventar","serial_number",sSerialNumber)
+			If bStatus Then bStatus=Reg_SetString("HKLM","Software\CapaSystems\tst\Inventar","last_control",sLastControl)
+			gsInventar_BarCode=sBarCode
+			gsInventar_Location=sLocation
+			gsInventar_LocationPerson=sLocationPerson
+			gsInventar_MacAddress=sMacAddress
+			gsInventar_SerialNumber=sSerialNumber
+			gsInventar_LastControl=sLastControl
+			Call Job_WriteLog("Inventar_GetBarcodeFromSerialNumber","Inventar_GetBarcodeFromSerialNumber: Found Data barcode=" & sBarCode,bStatus,True)
+			Call Job_WriteLog("Inventar_GetBarcodeFromSerialNumber","Inventar_GetBarcodeFromSerialNumber: Found Data location=" & sLocation,bStatus,True)
+			Call Job_WriteLog("Inventar_GetBarcodeFromSerialNumber","Inventar_GetBarcodeFromSerialNumber: Found Data location_person=" & sLocationPerson,bStatus,True)
+			Call Job_WriteLog("Inventar_GetBarcodeFromSerialNumber","Inventar_GetBarcodeFromSerialNumber: Found Data mac_address=" & sMacAddress,bStatus,True)
+			Call Job_WriteLog("Inventar_GetBarcodeFromSerialNumber","Inventar_GetBarcodeFromSerialNumber: Found Data serial_number=" & sSerialNumber,bStatus,True)
+			Call Job_WriteLog("Inventar_GetBarcodeFromSerialNumber","Inventar_GetBarcodeFromSerialNumber: Found Data last_control=" & sLastControl,bStatus,True)
+			'WScript.Echo "Inventar_GetBarcodeFromSerialNumber: Found Data barcode=" & sBarCode,bStatus,True)'
+			'WScript.Echo "Inventar_GetBarcodeFromSerialNumber: Found Data location=" & sLocation,bStatus,True)
+			'WScript.Echo "Inventar_GetBarcodeFromSerialNumber: Found Data location_person=" & sLocationPerson,bStatus,True)'
+			'WScript.Echo "Inventar_GetBarcodeFromSerialNumber: Found Data mac_address=" & sMacAddress,bStatus,True)'
+			'WScript.Echo "Inventar_GetBarcodeFromSerialNumber: Found Data serial_number=" & sSerialNumber,bStatus,True)
+			'WScript.Echo "Inventar_GetBarcodeFromSerialNumber: Found Data last_control=" & sLastControl,bStatus,True)
+			If iCnt > 0 Then
+			  Call Job_WriteLog("Inventar_GetBarcodeFromSerialNumber","More than one record found for SN: " + sSerialNumber,bStatus,True)
+			  'objRecordset.MoveLast
+			End If
+			iCnt=iCnt+1
+			objRecordset.MoveNext
+		Loop
+	End If
+
+	If iCnt > 1 Then
+'			bStatus=Reg_SetString("HKLM","Software\CapaSystems\tst\Inventar","barcode","Multiple")
+		Call Job_WriteLog("Inventar_GetBarcodeFromSerialNumber","Inventar_GetBarcodeFromSerialNumberreturns more than one hit on serial : '" + Cstr(sSerialNumber) + "'",bStatus,True)
+	End If
+	Call Job_WriteLog("Inventar_GetBarcodeFromSerialNumber","Inventar_GetBarcodeFromSerialNumber: Function End. Returns=" & Cstr(bStatus),bStatus,True)
+	sKeyPath=sBarCode
+	Inventar_GetBarcodeFromSerialNumber=bStatus
+End Function
+
+
+'***********************************************
+
+Private Function Inventar_GetBarcodeFromMacAddress(sMacAddress)
+	On Error Resume Next
+	Dim bStatus
+	bStatus=True
+	Dim sBarCode:sBarCode=""
+	Call Job_WriteLog("Inventar_GetBarcodeFromMacAddress","Inventar_GetBarcodeFromMacAddress: Function Start. Input 1=" & sMacAddress,bStatus,True)
+	Call OSD_UpdateCustomMessage("Reading info from database...")
+	Set objRecordset = CreateObject("ADODB.Recordset")
+	'wscript.echo sMacAddress
+	sMacAddress=cCharsInsertEvery("[-: ]?",sMacAddress,2,False,False)
+	'wscript.echo sMacAddress
+	'declare the SQL statement that will query the database
+	strSQLQuery = "SELECT * FROM inventory WHERE mac_address REGEXP '" & sMacAddress & "'"
+	Call Job_WriteLog("Inventar_GetBarcodeFromMacAddress","Inventar_GetBarcodeFromMacAddress: SQL Query '" & strSQLQuery & "'",True,False)
+	Set objRecordset = gobjConnection.Execute(strSQLQuery)
+	If Err.Number <> 0 Then
+		bStatus=False
+		Call Job_WriteLog("Inventar_GetBarcodeFromMacAddress","Inventar_GetBarcodeFromMacAddress: Error Execute Query to Database Server. ErrorNumber=" & Err.Number & " ErrorDescription=" & Err.Description & " ErrorSource=" & Err.Source,bStatus,True)
+		Err.Clear
+	End If
+	'first of all determine whether there are any records
+	If objRecordset.EOF Then
+		Call Job_WriteLog("Inventar_GetBarcodeFromMacAddress","Inventar_GetBarcodeFromMacAddress:No Data Found.",bStatus,True)
+	Else
+		'if there are records then loop through the fields
+		iCnt=0
+		Do While NOT objRecordset.Eof
+			'WScript.Echo "iCnt m: " + CStr(iCnt)
+			sBarCode=CStr(objRecordset("barcode"))
+			sLocation=CStr(objRecordset("location"))
+			sLocationPerson=CStr(objRecordset("location_person"))
+			sMacAddress=CStr(objRecordset("mac_address"))
+			sSerialNumber=CStr(objRecordset("serial_number"))
+			sLastControl=CStr(objRecordset("last_control"))
+			If iCnt > 0 Then
+				'WScript.Echo "Multiple mac's!"
+				sBarCode="!!!!!!"
+				sMacAddress="mac_address"
+				Call Job_WriteLog("Inventar_GetBarcodeFromMacAddress","Inventar_GetBarcodeFromMacAddress: Found record # " & CStr(iCnt),bStatus,True)
+			End If
+			If bStatus Then bStatus=Reg_SetString("HKLM","Software\CapaSystems\tst\Inventar","barcode",sBarCode)
+			If bStatus Then bStatus=Reg_SetString("HKLM","Software\CapaSystems\tst\Inventar","location",sLocation)
+			If bStatus Then bStatus=Reg_SetString("HKLM","Software\CapaSystems\tst\Inventar","location_person",sLocationPerson)
+			If bStatus Then bStatus=Reg_SetString("HKLM","Software\CapaSystems\tst\Inventar","mac_address",sMacAddress)
+			If bStatus Then bStatus=Reg_SetString("HKLM","Software\CapaSystems\tst\Inventar","serial_number",sSerialNumber)
+			If bStatus Then bStatus=Reg_SetString("HKLM","Software\CapaSystems\tst\Inventar","last_control",sLastControl)
+			gsInventar_BarCode=sBarCode
+			gsInventar_Location=sLocation
+			gsInventar_LocationPerson=sLocationPerson
+			gsInventar_MacAddress=sMacAddress
+			gsInventar_SerialNumber=sSerialNumber
+			gsInventar_LastControl=sLastControl
+			Call Job_WriteLog("Inventar_GetBarcodeFromMacAddress","Inventar_GetBarcodeFromMacAddress: Found Data barcode=" & sBarCode,bStatus,True)
+			Call Job_WriteLog("Inventar_GetBarcodeFromMacAddress","Inventar_GetBarcodeFromMacAddress: Found Data location=" & sLocation,bStatus,True)
+			Call Job_WriteLog("Inventar_GetBarcodeFromMacAddress","Inventar_GetBarcodeFromMacAddress: Found Data location_person=" & sLocationPerson,bStatus,True)
+			Call Job_WriteLog("Inventar_GetBarcodeFromMacAddress","Inventar_GetBarcodeFromMacAddress: Found Data mac_address=" & sMacAddress,bStatus,True)
+			Call Job_WriteLog("Inventar_GetBarcodeFromMacAddress","Inventar_GetBarcodeFromMacAddress: Found Data serial_number=" & sSerialNumber,bStatus,True)
+			Call Job_WriteLog("Inventar_GetBarcodeFromMacAddress","Inventar_GetBarcodeFromMacAddress: Found Data last_control=" & sLastControl,bStatus,True)
+			iCnt=iCnt+1
+			objRecordset.MoveNext
+			If iCnt > 0 Then
+			  Call Job_WriteLog("Inventar_GetBarcodeFromMacAddress","More than one record found for MAC: " + sMacAddress,bStatus,True)
+			  break
+			End If
+		Loop
+	End If
+	If iCnt > 1 Then
+		Call Job_WriteLog("Inventar_GetBarcodeFromMacAddress","Inventar_GetBarcodeFromMacAddress - more than one hit on mac address : '" + Cstr(sMacAddress) + "'",bStatus,True)
+	End If
+	Call Job_WriteLog("Inventar_GetBarcodeFromMacAddress","Inventar_GetBarcodeFromMacAddress: Function End. Returns=" & Cstr(bStatus),bStatus,True)
+	sKeyPath=sBarCode
+	Inventar_GetBarcodeFromMacAddress=bStatus
+End Function
+
+
+'***********************************************
+
+Private Function Inventar_GetDataFromRegistry()
+	Dim bStatus
+	bStatus=True
+	Call Job_WriteLog("Inventar_GetDataFromRegistry","Inventar_GetDataFromRegistry:Getting inventar data from registry and update global variables",True,True)
+	If bStatus Then bStatus=Reg_GetString("HKLM","Software\CapaSystems\tst\Inventar","barcode",True)
+	If bStatus And sKeyPath<>"" Then gsInventar_BarCode=sKeyPath
+	If bStatus Then bStatus=Reg_GetString("HKLM","Software\CapaSystems\tst\Inventar","location",True)
+	If bStatus And sKeyPath<>"" Then gsInventar_Location=sKeyPath
+	If bStatus Then bStatus=Reg_GetString("HKLM","Software\CapaSystems\tst\Inventar","location_person",True)
+	If bStatus And sKeyPath<>"" Then gsInventar_LocationPerson=sKeyPath
+	If bStatus Then bStatus=Reg_GetString("HKLM","Software\CapaSystems\tst\Inventar","mac_address",True)
+	If bStatus And sKeyPath<>"" Then gsInventar_MacAddress=sKeyPath
+	If bStatus Then bStatus=Reg_GetString("HKLM","Software\CapaSystems\tst\Inventar","serial_number",True)
+	If bStatus And sKeyPath<>"" Then gsInventar_SerialNumber=sKeyPath
+	If bStatus Then bStatus=Reg_GetString("HKLM","Software\CapaSystems\tst\Inventar","last_control",True)
+	If bStatus And sKeyPath<>"" Then gsInventar_LastControl=sKeyPath
+	Call Job_WriteLog("Inventar_GetDataFromRegistry","Inventar_GetDataFromRegistry: End",True,True)
+	Inventar_GetDataFromRegistry=bStatus
+End Function
+
+
+'***********************************************
+
+Private Function Inventar_WriteDataToRegistryHive()
+	Dim bStatus
+	bstatus=True
+	sWindowsDrive=""
+	If bStatus Then bStatus=Job_WriteLog("Inventar_WriteDataToRegistryHive","Loading default hive to HKU\TempHive",bStatus,False)
+	'Locate the os drive
+	gbValue=False
+	If bStatus and gbValue=false Then bStatus=File_ExistDir("c:\Windows\System32\config",False):if gbValue=true then sWindowsDrive="c:"
+	If bStatus and gbValue=false Then bStatus=File_ExistDir("d:\Windows\System32\config",False):if gbValue=true then sWindowsDrive="d:"
+	If bStatus and gbValue=false Then bStatus=File_ExistDir("e:\Windows\System32\config",False):if gbValue=true then sWindowsDrive="e:"
+	If bStatus and gbValue=false Then bStatus=Job_WriteLog("Inventar_WriteDataToRegistryHive","Could not find windows registry",bStatus,False)
+
+	If bStatus Then bStatus=Inventar_GetDataFromRegistry()
+	If bStatus Then bStatus=Shell_Execute("cmd.exe","/c reg load HKLM\TempHive " & sWindowsDrive & "\Windows\System32\config\software",True,0,False)
+	If bStatus Then bStatus=Job_WriteLog("Inventar_WriteDataToRegistryHive","Writing Inventar data to registry hive...",bStatus,False)
+	If bStatus Then bStatus=Reg_SetString("HKLM","TempHive\CapaSystems\tst\Inventar","barcode",gsInventar_BarCode)
+	If bStatus Then bStatus=Reg_SetString("HKLM","TempHive\CapaSystems\tst\Inventar","location",gsInventar_Location)
+	If bStatus Then bStatus=Reg_SetString("HKLM","TempHive\CapaSystems\tst\Inventar","location_person",gsInventar_LocationPerson)
+	If bStatus Then bStatus=Reg_SetString("HKLM","TempHive\CapaSystems\tst\Inventar","mac_address",gsInventar_MacAddress)
+	If bStatus Then bStatus=Reg_SetString("HKLM","TempHive\CapaSystems\tst\Inventar","serial_number",gsInventar_SerialNumber)
+	If bStatus Then bStatus=Reg_SetString("HKLM","TempHive\CapaSystems\tst\Inventar","last_control",gsInventar_LastControl)
+	If bStatus Then bStatus=Reg_GetString("HKLM","Software\CapaSystems\tst\OSD","LdapDestination",True) ' get from winpe registry
+	If bStatus And sKeyPath<>"" Then sOU=sKeyPath
+	If bStatus Then bStatus=Reg_SetString("HKLM","TempHive\CapaSystems\tst\OSD","LdapDestination",sOU)
+	If bStatus Then bStatus=Job_WriteLog("Inventar_WriteDataToRegistryHive","Unloading default hive",bStatus,False)
+	If bStatus Then bStatus=Shell_Execute("cmd.exe","/c reg unload HKLM\TempHive",True,0,False)
+	Inventar_WriteDataToRegistryHive=True
+End Function
+
+
+
+
+Function Inventar_GetADLdapPath(sLocation)
+  Dim bStatus:bStatus=True
+	Const sClass	    = "0A17,0A27,2A12,2A14,2A18,2A20,2A50,2A52,2A54,3A12,3A14,3A18,3A50,3A52,4A14,4A16,4A20,4A22,4A30,4A54,4A56,4A58,5A14"
+	Const sAditorium    = "0A11,0A35,2A56,4A60"
+	Const sGrouproom    = "2A30,2A58,2A60,3A58,3A60,4A34,4A44,4A46,4A62,4A64,5A20,5A22"
+	Const sBalkony	    = "2A44,3A44,4A48"
+	Const sLibrary	    = "0B01,0B11"							' 0B01 old, 0B11 new
+	Const sOthers		= "0A03,0A07,0A09,2A28,2A30,3A54,5A56"	' Exceptions like Reception, PitLab, etc.
+
+	Call Job_WriteLog("Inventar_GetADLdapPath","Inventar_GetADLdapPath: Inventory Location Number='" & sLocation & "'",bStatus,True)
+	sKeyPath=""
+	sParent = ""			' Parent(s)
+	sLocationArea = ""
+	sOU = "Others"
+	If Len(sLocation) = 6 Then
+		sTyp = Left(sLocation, 2)
+		sFloor = Mid(sLocation, 3, 1)
+		sLocationArea = Mid(sLocation, 4, 1)
+		sOffice = Right(sLocation, 2)
+		If sTyp = "99" Then
+			Select Case sLocationArea
+				Case "1" sLocationArea = "A"
+				Case "2" sLocationArea = "B"
+				Case "3" sLocationArea = "C"
+				Case "4" sLocationArea = "D"
+				Case "5" sLocationArea = "E"
+				Case "8" sLocationArea = "M"		' Old Mikado House - should not happen!
+			End Select
+			If sLocationArea = "A" AND Not(sFloor = 9) Then			' 9 = cellar
+				sOU = CStr(sFloor) & sLocationArea & CStr(sOffice)
+			Else
+			   If sLocationArea = "E" AND sFloor = 4 Then sOU = sOU '    "4E" old gamelab'ish thingie
+			End If
 		End If
-		For Each objItem in colItems
-			If Not(IsNull(objItem.MACAddress)) Then
-				Call Job_WriteLog("Custom_Network_GetMacAddress","Custom_Network_GetMacAddress: MAC Address adding to Dictionary. " & objItem.MACAddress,bStatus,True)
-				strMACAddress=objItem.MACAddress
-				strMACAddress=Replace(strMACAddress,":","")
-				gdicMacAddress.add strMACAddress,strMACAddress
+		sParent = ""
+		Call Job_WriteLog("Inventar_GetADLdapPath","Inventar_GetADLdapPath: Converting ou '" & sOU & "' to LDAP.",bStatus,True)
+		If InStr(sClass, sOU) > 0 Then
+			sParent ="OU=" + sOU + ",OU=Class,OU=Classroom,OU=Facilities"
+		ElseIf InStr(sAditorium, sOU) > 0 Then
+			sParent ="OU=" + sOU + ",OU=Auditorium,OU=Classroom,OU=Facilities"
+		ElseIf InStr(sBalkony, sOU) > 0 Then
+			sParent ="OU=" + sOU + ",OU=Balkony,OU=Common,OU=Facilities"
+		ElseIf InStr(sGrouproom, sOU) > 0 Then
+			sParent ="OU=" + sOU + ",OU=Grouproom,OU=Common,OU=Facilities"
+		ElseIf InStr(sLibrary, sOU) > 0 Then
+			sParent ="OU=" + sOU + ",OU=Library,OU=Common,OU=Facilities"
+		ElseIf InStr(sOthers, sOU) > 0 Then
+			sParent ="OU=Others"
+		Else
+			sParent ="OU=Others"
+			'Call Job_WriteLog("Inventar_GetADLdapPath","Inventar_GetADLdapPath: Inventar number not valid. Error 1",bStatus,True)
+		End If
+	Else
+		Call Job_WriteLog("Inventar_GetADLdapPath","Inventar_GetADLdapPath: Inventar number not valid. Error 2",bStatus,True)
+		sParent="OU=Inventory Error"
+		bStatus=False
+	End If
+	'Exceptions find invalid inventory data
+	If Left(sLocation, 3) = "999" Then
+		Call Job_WriteLog("Inventar_GetADLdapPath","Inventar_GetADLdapPath: Inventar number not valid. Error 3",bStatus,True)
+		sParent="OU=Inventory Error"
+		bStatus=False
+	End If
+	sKeyPath=sParent
+	'If bStatus Then bStatus=Reg_SetString("HKLM","Software\CapaSystems\tst\OU","LdapDestination",sParent & "," & gsDestinationOULdap)
+	If bStatus Then bStatus=Reg_SetString("HKLM","Software\CapaSystems\tst\OSD","LdapDestination",sParent & "," & gsDestinationOULdap)
+	' Call Job_WriteLog("Inventar_GetADLdapPath","Inventar_GetADLdapPath: Returning='" & sKeyPath & "'",bStatus,True)
+	Inventar_GetADLdapPath=bStatus
+End Function
+
+
+Function cCharsInsertEvery(sInsert,sTarget,nEvery,bStart,bEnd)
+' -------------------------------------------------------------------
+'               sInsert : What's to be inserted
+'               sTarget : Target for insert
+'               nEvery  : Insert for every n'th character
+'               bStart  : If true also insert at start of target
+'               bEnd    : If true also insert at end of target
+' -------------------------------------------------------------------
+  If bStart then sOut = sInsert else sOut = ""
+  while len(sTarget) > 0
+	sPart = Left(sTarget,nEvery)
+  		sTarget = Mid(sTarget,nEvery+1)
+  		sOut = sOut + sPart + sInsert
+  WEnd
+  If Not bEnd Then sOut = Left(sOut, Len(sOut) - Len(sInsert))
+  cCharsInsertEvery = sOut
+End Function
+
+'********************* Custom Network functiions
+
+Private Function Custom_Network_GetMacAddress()
+	Dim bStatus
+	bStatus=True
+	Err.Clear
+	gdicMacAddress.RemoveAll
+	Set objWMIService = GetObject("winmgmts:\\.\root\cimv2")
+	Set colItems = objWMIService.ExecQuery("Select * From Win32_NetworkAdapterConfiguration Where IPEnabled = True")
+	strComputer = "."
+	Set objWMIService = GetObject("winmgmts:\\.\root\cimv2")
+	Set colItems = objWMIService.ExecQuery("Select * From Win32_NetworkAdapter")
+	If Err.Number <> 0 Then
+		bStatus=False
+		Call Job_WriteLog("Custom_Network_GetMacAddress","Custom_Network_GetMacAddress: Error Connecting using WMI. ErrorNumber=" & Err.Number & " ErrorDescription=" & Err.Description & " ErrorSource=" & Err.Source,bStatus,True)
+		Err.Clear
+	End If
+	For Each objItem in colItems
+		If Not(IsNull(objItem.MACAddress)) Then
+			Call Job_WriteLog("Custom_Network_GetMacAddress","Custom_Network_GetMacAddress: MAC Address adding to Dictionary. " & objItem.MACAddress,bStatus,True)
+			strMACAddress=objItem.MACAddress
+			strMACAddress=Replace(strMACAddress,":","")
+			gdicMacAddress.add strMACAddress,strMACAddress
+		End If
+	Next
+	Custom_Network_GetMacAddress=bStatus
+End Function
+
+
+'************************* Custom OSD/CMS functions
+
+Function Custom_Msgbox(sText,sTitle,sButtons )
+	Dim bStatus
+	bStatus=True
+	If bStatus Then bStatus=Job_WriteLog("Custom_Msgbox","Custom_Msgbox: " & """" & vbNewLine & "MessageboxMode=" & CSTR(giMessageBoxMode),bStatus,False)
+	Select Case giMessageBoxMode
+		Case 0 'do nothing
+		Case 1  Call MsgBox(sText, sButtons, sTitle)
+		Case 2 	Call oShell.Popup(sText & vbNewLine & vbNewLine & "Messagebox will automatically close in " & giMessageBoxTimeOut & " second(s).", giMessageBoxTimeOut, sTitle, sButtons)
+	End Select
+	Custom_Msgbox=bStatus
+End Function
+
+
+Private Function Custom_IsReinstallation()
+	Dim bStatus
+	bStatus=True
+	sFunction="Custom_IsReinstallation"
+	If bStatus Then bStatus=Job_WriteLog(sFunction,"Now Working In Function: """ & sFunction & """",bStatus,False)
+	If bStatus Then bStatus=Reg_GetString("HKLM","Software\CapaSystems\CapaInstaller\OSD","IsReinstallation",False)
+	bReinstallation=gbValue
+	If bStatus Then bStatus=Job_WriteLog(sFunction,"IsReinstallation: """ & cstr(bReinstallation) & """",bStatus,False)
+	Custom_IsReinstallation=bReinstallation
+End Function
+
+
+Function Custom_Get1970Date()
+	Dim formatedDate, LCID
+	LCID = GetLocale()
+	Select Case LCID
+	Case 1030, 1043
+		formatedDate = "01-01-1970 00:00:00"
+	Case 1031, 3097, 5127, 4103, 2055, 1035, 4108, 1044, 2068, 2077
+		formatedDate = "01.01.1970 00:00:00"
+	Case 1033, 2057, 1034, 1036, 2060, 5132
+		formatedDate = "01/01/1970 00:00:00 AM"
+	Case 3084, 1053
+		formatedDate = "1970-01-01 00:00:00"
+	Case Else
+		formatedDate = "01-01-1970 00:00:00"
+	End Select
+	Custom_Get1970Date = formatedDate
+End Function
+
+
+'*  Retrieve ModelName from OSD DriverMappingsFile
+Function Custom_DriverGetModelName()
+	Dim bStatus
+	bStatus=True
+	gsValue=""
+	sFunction="Custom_DriverGetModelName"
+	If CUSTOM_DEBUG Then wScript.Echo sFunction + " Starter"
+	Call Job_WriteLog("Custom_DriverGetModelName","Startet",True,True)
+	If bStatus Then bStatus=Ini_GetAllSections(gsDriverMappingsFile,";",True,False)
+	aIniSection=gaValue
+	For Each sIniSection in aIniSection
+		aValue=Split(sIniSection,"|")
+		For Each sModel In aValue
+			sModel=Replace(sModel,"*","")
+			IF CUSTOM_DEBUG Then wscript.echo "Comparing:" + vbCrlf + sModel & " med " & gsModelName
+			If InStr(gsModelName,sModel)>0 Then
+				If bStatus Then bStatus=Ini_GetAllSectionVariables(gsDriverMappingsFile,sIniSection,";",True,True)
+				aIniVariables=gaValue
+				For Each sIniVariable in aIniVariables
+					IF CUSTOM_DEBUG Then wscript.echo "Drivers: " + sIniVariable
+					If bStatus Then bStatus=Ini_ReadEntry(gsDriverMappingsFile,sIniSection,sIniVariable,True)
+					sDriverPath=gsValue
+					If sDriverPath<>"" Then
+						sDriverModelName=Left(sDriverPath,InStr(sDriverPath,"\")-1)
+						IF CUSTOM_DEBUG Then wscript.echo "Modelname=" & sDriverModelName
+						Exit For
+					End If
+				Next
 			End If
 		Next
-		Custom_Network_GetMacAddress=bStatus
-	End Function
-
-
-	'************************* Custom OSD/CMS functions
-
-	Function Custom_Msgbox(sText,sTitle,sButtons )
-		Dim bStatus
-		bStatus=True
-		If bStatus Then bStatus=Job_WriteLog("Custom_Msgbox","Custom_Msgbox: " & """" & vbNewLine & "MessageboxMode=" & CSTR(giMessageBoxMode),bStatus,False)
-		Select Case giMessageBoxMode
-			Case 0 'do nothing
-			Case 1  Call MsgBox(sText, sButtons, sTitle)
-			Case 2 	Call oShell.Popup(sText & vbNewLine & vbNewLine & "Messagebox will automatically close in " & giMessageBoxTimeOut & " second(s).", giMessageBoxTimeOut, sTitle, sButtons)
-		End Select
-		Custom_Msgbox=bStatus
-	End Function
-
-
-	Private Function Custom_IsReinstallation()
-		Dim bStatus
-		bStatus=True
-		sFunction="Custom_IsReinstallation"
-		If bStatus Then bStatus=Job_WriteLog(sFunction,"Now Working In Function: """ & sFunction & """",bStatus,False)
-		If bStatus Then bStatus=Reg_GetString("HKLM","Software\CapaSystems\CapaInstaller\OSD","IsReinstallation",False)
-		bReinstallation=gbValue
-		If bStatus Then bStatus=Job_WriteLog(sFunction,"IsReinstallation: """ & cstr(bReinstallation) & """",bStatus,False)
-		Custom_IsReinstallation=bReinstallation
-	End Function
-
-
-	Function Custom_Get1970Date()
-		Dim formatedDate, LCID
-		LCID = GetLocale()
-		Select Case LCID
-		Case 1030, 1043
-			formatedDate = "01-01-1970 00:00:00"
-		Case 1031, 3097, 5127, 4103, 2055, 1035, 4108, 1044, 2068, 2077
-			formatedDate = "01.01.1970 00:00:00"
-		Case 1033, 2057, 1034, 1036, 2060, 5132
-			formatedDate = "01/01/1970 00:00:00 AM"
-		Case 3084, 1053
-			formatedDate = "1970-01-01 00:00:00"
-		Case Else
-			formatedDate = "01-01-1970 00:00:00"
-		End Select
-		Custom_Get1970Date = formatedDate
-	End Function
-
-
-	'*  Retrieve ModelName from OSD DriverMappingsFile
-	Function Custom_DriverGetModelName()
-		Dim bStatus
-		bStatus=True
-		gsValue=""
-		sFunction="Custom_DriverGetModelName"
-		If CUSTOM_DEBUG Then wScript.Echo sFunction + " Starter"
-		Call Job_WriteLog("Custom_DriverGetModelName","Startet",True,True)
-		If bStatus Then bStatus=Ini_GetAllSections(gsDriverMappingsFile,";",True,False)
-		aIniSection=gaValue
-		For Each sIniSection in aIniSection
-			aValue=Split(sIniSection,"|")
-			For Each sModel In aValue
-				sModel=Replace(sModel,"*","")
-				IF CUSTOM_DEBUG Then wscript.echo "Comparing:" + vbCrlf + sModel & " med " & gsModelName
-				If InStr(gsModelName,sModel)>0 Then
-					If bStatus Then bStatus=Ini_GetAllSectionVariables(gsDriverMappingsFile,sIniSection,";",True,True)
-					aIniVariables=gaValue
-					For Each sIniVariable in aIniVariables
-						IF CUSTOM_DEBUG Then wscript.echo "Drivers: " + sIniVariable
-						If bStatus Then bStatus=Ini_ReadEntry(gsDriverMappingsFile,sIniSection,sIniVariable,True)
-						sDriverPath=gsValue
-						If sDriverPath<>"" Then
-							sDriverModelName=Left(sDriverPath,InStr(sDriverPath,"\")-1)
-							IF CUSTOM_DEBUG Then wscript.echo "Modelname=" & sDriverModelName
-							Exit For
-						End If
-					Next
-				End If
-			Next
-		Next
-		If sDriverModelName="" Then
-			sDriverModelName="Unknown Model"
-		End if
-		gsValue=sDriverModelName
-		Call Job_WriteLog("Custom_DriverGetModelName","Ended. OSD Model Name Found '" & sDriverModelName & "'",True,True)
-		If CUSTOM_DEBUG Then wScript.Echo sFunction + " Slutter (" + gsValue + ")"
-		Custom_DriverGetModelName=bStatus
-	End Function
+	Next
+	If sDriverModelName="" Then
+		sDriverModelName="Unknown Model"
+	End if
+	gsValue=sDriverModelName
+	Call Job_WriteLog("Custom_DriverGetModelName","Ended. OSD Model Name Found '" & sDriverModelName & "'",True,True)
+	If CUSTOM_DEBUG Then wScript.Echo sFunction + " Slutter (" + gsValue + ")"
+	Custom_DriverGetModelName=bStatus
+End Function
 
 
 Function Custom_Check_ModelName()
-	Dim bStatus, sFunction, sNextLine
-	Set oLocalFSO = CreateObject("Scripting.FileSystemObject")
+  Dim bStatus, sFunction, sNextLine
+  Set oLocalFSO = CreateObject("Scripting.FileSystemObject")
 
-	bStatus=True
-	sFunction="Custom_Check_ModelName"
+  bStatus=True
+  sFunction="Custom_Check_ModelName"
     If Instr(UCAse(gsImageName),"10") > 0 Then sOsSystem="WINDOWS 10"
     If Instr(UCAse(gsImageName),"8") > 0 Then sOsSystem="WINDOWS 8"
     If Instr(UCAse(gsImageName),"7") > 0 Then sOsSystem="WINDOWS 7"
-	If Instr(UCAse(gsImageName),"VISTA") > 0 Then sOsSystem="VISTA"
-	If Instr(UCAse(gsImageName),"XP") > 0 Then sOsSystem="XP"
-	If Instr(UCAse(gsImageName),"2000") > 0 Then sOsSystem="2000"
-	'Checking for DriverMappings.ini existence'
-	If bStatus Then bStatus=Job_Writelog(sFunction,"Checking for 'Drivermappings.ini' at " & gsDriverMappingsFile,bStatus,false)
-	If bStatus Then bStatus=File_ExistFile(gsDriverMappingsFile,False)
-	If gbValue=True Then
-		If CUSTOM_DEBUG Then wscript.echo "Fandt Ini-Fil: " & gsDriverMappingsFile
+  If Instr(UCAse(gsImageName),"VISTA") > 0 Then sOsSystem="VISTA"
+  If Instr(UCAse(gsImageName),"XP") > 0 Then sOsSystem="XP"
+  If Instr(UCAse(gsImageName),"2000") > 0 Then sOsSystem="2000"
+  'Checking for DriverMappings.ini existence'
+  If bStatus Then bStatus=Job_Writelog(sFunction,"Checking for 'Drivermappings.ini' at " & gsDriverMappingsFile,bStatus,false)
+  If bStatus Then bStatus=File_ExistFile(gsDriverMappingsFile,False)
+  If gbValue=True Then
+  	If CUSTOM_DEBUG Then wscript.echo "Fandt Ini-Fil: " & gsDriverMappingsFile
 
-		Dim objTextStream
-		Set objTextStream = oLocalFSO.OpenTextFile(gsDriverMappingsFile,ForReading)
+  	Dim objTextStream
+  	Set objTextStream = oLocalFSO.OpenTextFile(gsDriverMappingsFile,ForReading)
 
-		IF CUSTOM_DEBUG Then wscript.echo "DEBUG: DriverMappings.ini FOUND"
-		Do Until objTextStream.AtEndOfStream
-			sNextLine = UCAse(objTextStream.Readline)
-			If Instr(UCAse(sNextLine),UCAse("[")) Then
-				sNextLine=Replace(sNextLine,"[","")
-				sNextLine=Replace(sNextLine,"]","")
-				sNextLine=Replace(sNextLine,"*","")
-				If Instr(UCAse(gsModelName),UCAse(sNextLine)) > 0 Then
-					bModelNameFound=True
-				End If
-			Else
-				'No Action, Not Section'
-			End If
-		Loop
-		If bModelNameFound Then
-			If CUSTOM_DEBUG then Call Msgbox("Modelname " & """" & gsModelName & """" & " FOUND IN " & """" & gsDriverMappingsFile & """")
-		Else
-			Call Custom_Msgbox("Drivers for '" & gsModelName & "' not found in '" & gsDriverMappingsFile & "'." & vbNewLine & vbNewLine & "Click 'OK' to continue the installation.","Installation Information",vbOKOnly + vbInformation)
-			bStatus=False
-		End If
-		objTextStream.Close
-	Else
-		IF CUSTOM_DEBUG Then wscript.echo "The File '" & gsDriverMappingsFile & "' Not Found, click 'OK' to continue with default drivers only."
-		bStatus=False
-	End If
-	Custom_Check_ModelName=bStatus
+  	IF CUSTOM_DEBUG Then wscript.echo "DEBUG: DriverMappings.ini FOUND"
+  	Do Until objTextStream.AtEndOfStream
+  		sNextLine = UCAse(objTextStream.Readline)
+  		If Instr(UCAse(sNextLine),UCAse("[")) Then
+  			sNextLine=Replace(sNextLine,"[","")
+  			sNextLine=Replace(sNextLine,"]","")
+  			sNextLine=Replace(sNextLine,"*","")
+  			If Instr(UCAse(gsModelName),UCAse(sNextLine)) > 0 Then
+  				bModelNameFound=True
+  			End If
+  		Else
+  			'No Action, Not Section'
+  		End If
+  	Loop
+  	If bModelNameFound Then
+  		If CUSTOM_DEBUG then Call Msgbox("Modelname " & """" & gsModelName & """" & " FOUND IN " & """" & gsDriverMappingsFile & """")
+  	Else
+  		Call Custom_Msgbox("Drivers for '" & gsModelName & "' not found in '" & gsDriverMappingsFile & "'." & vbNewLine & vbNewLine & "Click 'OK' to continue the installation.","Installation Information",vbOKOnly + vbInformation)
+  		bStatus=False
+  	End If
+  	objTextStream.Close
+  Else
+  	IF CUSTOM_DEBUG Then wscript.echo "The File '" & gsDriverMappingsFile & "' Not Found, click 'OK' to continue with default drivers only."
+  	bStatus=False
+  End If
+  Custom_Check_ModelName=bStatus
 End Function
 
 
 Function Custom_CopyLogs()
-	Dim bStatus, sFunction, sOsSystem
-	'Begin
+  Dim bStatus, sFunction, sOsSystem
+  'Begin
   	bStatus=True
-	sFunction="Custom_CopyLogs"
-	Call File_DelTree(gsLogServerFolder & "\" & gsNewComputerName,True)
-	Call File_CreateDirectory(gsLogServerFolder & "\" & gsNewComputerName)
-	sFolder="x:\Program Files\Capainstaller\Client\Logs\Advanced"
-	If bStatus Then bStatus=File_ExistDir(sFolder,False)
-	If bStatus Then Call File_CopyTree(sFolder,gsLogServerFolder & "\" & gsNewComputerName & "\Advanced",True)
-	sFolder="x:\Logs"
-	If bStatus Then bStatus=File_ExistDir(sFolder,False)
-	If bStatus Then Call File_CopyTree(sFolder,gsLogServerFolder & "\" & gsNewComputerName & "\Logs",True)
+  sFunction="Custom_CopyLogs"
+  Call File_DelTree(gsLogServerFolder & "\" & gsNewComputerName,True)
+  Call File_CreateDirectory(gsLogServerFolder & "\" & gsNewComputerName)
+  sFolder="x:\Program Files\Capainstaller\Client\Logs\Advanced"
+  If bStatus Then bStatus=File_ExistDir(sFolder,False)
+  If bStatus Then Call File_CopyTree(sFolder,gsLogServerFolder & "\" & gsNewComputerName & "\Advanced",True)
+  sFolder="x:\Logs"
+  If bStatus Then bStatus=File_ExistDir(sFolder,False)
+  If bStatus Then Call File_CopyTree(sFolder,gsLogServerFolder & "\" & gsNewComputerName & "\Logs",True)
     If gsSysprepType="XML" Then
     Else
         If bStatus Then bStatus=File_ExistFile(gsUnattendFile,False)
@@ -698,23 +694,82 @@ Function Custom_CopyLogs()
             End If
         End If
     End If
-	Custom_CopyLogs=bStatus
+    Custom_CopyLogs=bStatus
 End Function
 
 
 
 Function Custom_RemoveComputerFromStaticGroup(sUnitName,sGroupName)
-	On Error Resume Next
-	bStatus=true
-	If bStatus Then bStatus=CMS_RemoveComputerFromStaticGroup(sUnitName, sGroupName)
-	If bStatus Then bStatus=CDM_RemoveComputerFromStaticGroup(sUnitName, sGroupName)
-	Custom_RemoveComputerFromStaticGroup=bStatus
+  On Error Resume Next
+  bStatus=true
+  If bStatus Then bStatus=CMS_RemoveComputerFromStaticGroup(sUnitName, sGroupName)
+  If bStatus Then bStatus=CDM_RemoveComputerFromStaticGroup(sUnitName, sGroupName)
+  Custom_RemoveComputerFromStaticGroup=bStatus
 End function
 
 Function Custom_AddUnittoGroup(sUnitName,sGroupName)
-	On Error Resume Next
-	bStatus=true
-	If bStatus Then bStatus=CDM_AddComputerToStaticGroup(sUnitName, sGroupName)
-	If bStatus Then bStatus=CMS_AddComputerToStaticGroup(sUnitName, sGroupName)
-	Custom_AddUnittoGroup=bStatus
+  On Error Resume Next
+  bStatus=true
+  If bStatus Then bStatus=CDM_AddComputerToStaticGroup(sUnitName, sGroupName)
+  If bStatus Then bStatus=CMS_AddComputerToStaticGroup(sUnitName, sGroupName)
+  Custom_AddUnittoGroup=bStatus
+End Function
+
+
+
+'Test'
+Function showDiskPart()
+  ' Run diskpart
+  set objShell = WScript.CreateObject("WScript.Shell")
+  set objExec = objShell.Exec("diskpart.exe")
+  sOutput = ""
+  ' Rescan the disks
+  strOutput = ExecuteDiskPartCommand("rescan", objExec)
+  '        WScript.echo strOutput
+  ' Select the first disk
+  strOutput = ExecuteDiskPartCommand("list disk", objExec)
+
+  arrayLines = Split(strOutput, vbcrlf)
+  for i = LBound(arrayLines) to UBound(arrayLines)
+      If i > 1 Then
+          if arrayLines(i) = "" Then Exit For
+          sOutput = sOutput + arrayLines(i) + vbCrlf
+  '                sDisk = Trim(Mid(arrayLines(i), 2, 8))
+  '                sStat = Trim(Mid(arrayLines(i), 12, 13))
+  '                sSize = Trim(Mid(arrayLines(i), 27, 7))
+  '                sFree = Trim(Mid(arrayLines(i), 36, 7))
+
+  '                WScript.Echo "Disk.. : " + sDisk
+  '                WScript.Echo "Status : " + sStat
+  '                WScript.Echo "Size.. : " + sSize
+  '                WScript.Echo "Free.. : " + sFree
+  '                WScript.Echo
+      End If
+  next
+  ' WScript.Echo sOutput
+  ' We can close diskpart
+  objExec.StdIn.Write "exit" & VbCrLf
+End Function
+
+
+Function ExecuteDiskPartCommand (strCommand, oExec)
+  ' Run the command we want
+  oExec.StdIn.Write strCommand & VbCrLf
+  ' If we read the output now, we will get the one from previous command (?). As we will always
+  ' run a dummy command after every valid command, we can safely ignore this
+  Do While True
+  IgnoreThis = oExec.StdOut.ReadLine & vbcrlf
+  ' Command finishes when diskpart prompt is shown again
+  If InStr(IgnoreThis, "DISKPART>") <> 0 Then Exit Do
+  Loop
+  ' Run a dummy command, so the next time we call this function and try to read output,
+  ' we can safely ignore the result
+  oExec.StdIn.Write VbCrLf
+  ' Read command's output
+  ExecuteDiskPartCommand = ""
+  Do While True
+  ExecuteDiskPartCommand = ExecuteDiskPartCommand & oExec.StdOut.ReadLine & vbcrlf
+  ' Command finishes when diskpart prompt is shown again
+  If InStr(ExecuteDiskPartCommand, "DISKPART>") <> 0 Then Exit Do
+  Loop
 End Function

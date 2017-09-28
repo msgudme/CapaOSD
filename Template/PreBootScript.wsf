@@ -9,11 +9,7 @@
 ' *************************************************************************************
 ' * Global script Declarations
 ' *************************************************************************************
-'
-Const CLEAN_LOGS=True					'Remove passwors, productkeys from files copied to log directory
-Const CUSTOM_DEBUG=False						' If true, messagebox will be displayed at end of script.
-Dim gsScriptVersion:gsScriptVersion="12:05 22. marts 2013"
-Dim gsScriptName:gsScriptName="PreBootScript.Wsf"'
+
 
 ' *************************************************************************************
 ' * Library Declarations

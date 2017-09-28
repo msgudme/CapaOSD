@@ -1,0 +1,318 @@
+msCustomVersion = "1"
+msCustomBuild = "1"
+
+
+
+Private Function CustomInit(sProductid)
+Dim bStatus
+Dim bDynContainer
+'Begin
+  bStatus=True
+  On Error resume Next
+  bDynContainer=False
+  gbDisplaymsgBox1=False
+
+  If bStatus Then bStatus=Job_WriteLog("CustomInit", "Version: " & msCustomVersion & " Build: " & msCustomBuild, bStatus, True)
+
+  If bStatus and (gbAMO or gbSDOKS or gbWTS or gbSMSKS or gbGeneric) Then
+	gsPackageRoot=gsPackageRoot & "\" & sProductid
+	If (gsReleaseId<>"") Then gsPackageRoot=gsPackageRoot & "\" & gsReleaseid
+	If gbSMSKS Or gbSDOKS or gbGeneric Then gsPackageRoot=gsPackageRoot & "\Kit"
+  ElseIf bStatus and (gbSMS or gbSDO) Then
+	gsPackageRoot=Mid(WScript.ScriptFullName,1,Len(WScript.ScriptFullName)-Len(WScript.ScriptName)-1)
+  ElseIf bStatus and (gbCDM) Then
+	If bStatus Then bStatus=CDM_GetContainer()
+	If bStatus and (gsValue<>"") Then
+	  gsPackageRoot=gsValue
+	  bDynContainer=True
+	End If
+
+	If Left(lCase(gsPackageRoot),4)<>"http" Then
+	  If gsMode="US" Then
+		gsPackageRoot=gsPackageRoot & "\UserJobs\" & sProductid & "\" & gsReleaseid
+	  Elseif gsMode="WS" Then
+		gsPackageRoot=gsPackageRoot & "\ComputerJobs\" & sProductid & "\" & gsReleaseid
+	  Else
+		gsPackageRoot=gsPackageRoot & "\PocketPCJobs\" & sProductid & "\" & gsReleaseid
+	  End If
+
+	  If bStatus and bDynContainer Then bStatus=File_ExistDir(gsPackageRoot,False)
+	  If bStatus and bDynContainer and Not(gbValue) Then bStatus=CDM_JobRetryLater("Package not avilable on calculated container - Skipping job")
+	  If bStatus and Not(bDynContainer) Then bStatus=File_ExistDir(gsPackageRoot,True)
+	End If
+  End If
+  CustomInit=bStatus
+End Function
+
+
+'********************* Custom Network functiions
+
+Private Function Custom_Network_GetMacAddress()
+	Dim bStatus
+	bStatus=True
+	Err.Clear
+	gdicMacAddress.RemoveAll
+	Set objWMIService = GetObject("winmgmts:\\.\root\cimv2")
+	Set colItems = objWMIService.ExecQuery("Select * From Win32_NetworkAdapterConfiguration Where IPEnabled = True")
+	strComputer = "."
+	Set objWMIService = GetObject("winmgmts:\\.\root\cimv2")
+	Set colItems = objWMIService.ExecQuery("Select * From Win32_NetworkAdapter")
+	If Err.Number <> 0 Then
+		bStatus=False
+		Call Job_WriteLog("Custom_Network_GetMacAddress","Custom_Network_GetMacAddress: Error Connecting using WMI. ErrorNumber=" & Err.Number & " ErrorDescription=" & Err.Description & " ErrorSource=" & Err.Source,bStatus,True)
+		Err.Clear
+	End If
+	For Each objItem in colItems
+		If Not(IsNull(objItem.MACAddress)) Then
+			Call Job_WriteLog("Custom_Network_GetMacAddress","Custom_Network_GetMacAddress: MAC Address adding to Dictionary. " & objItem.MACAddress,bStatus,True)
+			strMACAddress=objItem.MACAddress
+			strMACAddress=Replace(strMACAddress,":","")
+			gdicMacAddress.add strMACAddress,strMACAddress
+		End If
+	Next
+	Custom_Network_GetMacAddress=bStatus
+End Function
+
+
+'************************* Custom OSD/CMS functions
+
+Function Custom_Msgbox(sText,sTitle,sButtons )
+	Dim bStatus
+	bStatus=True
+	If bStatus Then bStatus=Job_WriteLog("Custom_Msgbox","Custom_Msgbox: " & """" & vbNewLine & "MessageboxMode=" & CSTR(giMessageBoxMode),bStatus,False)
+	Select Case giMessageBoxMode
+		Case 0 'do nothing
+		Case 1  Call MsgBox(sText, sButtons, sTitle)
+		Case 2 	Call oShell.Popup(sText & vbNewLine & vbNewLine & "Messagebox will automatically close in " & giMessageBoxTimeOut & " second(s).", giMessageBoxTimeOut, sTitle, sButtons)
+	End Select
+	Custom_Msgbox=bStatus
+End Function
+
+
+Private Function Custom_IsReinstallation()
+	Dim bStatus
+	bStatus=True
+	sFunction="Custom_IsReinstallation"
+	If bStatus Then bStatus=Job_WriteLog(sFunction,"Now Working In Function: """ & sFunction & """",bStatus,False)
+	If bStatus Then bStatus=Reg_GetString("HKLM","Software\CapaSystems\CapaInstaller\OSD","IsReinstallation",False)
+	bReinstallation=gbValue
+	If bStatus Then bStatus=Job_WriteLog(sFunction,"IsReinstallation: """ & cstr(bReinstallation) & """",bStatus,False)
+	Custom_IsReinstallation=bReinstallation
+End Function
+
+
+Function Custom_Get1970Date()
+	Dim formatedDate, LCID
+	LCID = GetLocale()
+	Select Case LCID
+	Case 1030, 1043
+		formatedDate = "01-01-1970 00:00:00"
+	Case 1031, 3097, 5127, 4103, 2055, 1035, 4108, 1044, 2068, 2077
+		formatedDate = "01.01.1970 00:00:00"
+	Case 1033, 2057, 1034, 1036, 2060, 5132
+		formatedDate = "01/01/1970 00:00:00 AM"
+	Case 3084, 1053
+		formatedDate = "1970-01-01 00:00:00"
+	Case Else
+		formatedDate = "01-01-1970 00:00:00"
+	End Select
+	Custom_Get1970Date = formatedDate
+End Function
+
+
+'*  Retrieve ModelName from OSD DriverMappingsFile
+Function Custom_DriverGetModelName()
+	Dim bStatus
+	bStatus=True
+	gsValue=""
+	sFunction="Custom_DriverGetModelName"
+	If CUSTOM_DEBUG Then wScript.Echo sFunction + " Starter"
+	Call Job_WriteLog("Custom_DriverGetModelName","Startet",True,True)
+	If bStatus Then bStatus=Ini_GetAllSections(gsDriverMappingsFile,";",True,False)
+	aIniSection=gaValue
+	For Each sIniSection in aIniSection
+		aValue=Split(sIniSection,"|")
+		For Each sModel In aValue
+			sModel=Replace(sModel,"*","")
+			IF CUSTOM_DEBUG Then wscript.echo "Comparing:" + vbCrlf + sModel & " med " & gsModelName
+			If InStr(gsModelName,sModel)>0 Then
+				If bStatus Then bStatus=Ini_GetAllSectionVariables(gsDriverMappingsFile,sIniSection,";",True,True)
+				aIniVariables=gaValue
+				For Each sIniVariable in aIniVariables
+					IF CUSTOM_DEBUG Then wscript.echo "Drivers: " + sIniVariable
+					If bStatus Then bStatus=Ini_ReadEntry(gsDriverMappingsFile,sIniSection,sIniVariable,True)
+					sDriverPath=gsValue
+					If sDriverPath<>"" Then
+						sDriverModelName=Left(sDriverPath,InStr(sDriverPath,"\")-1)
+						IF CUSTOM_DEBUG Then wscript.echo "Modelname=" & sDriverModelName
+						Exit For
+					End If
+				Next
+			End If
+		Next
+	Next
+	If sDriverModelName="" Then
+		sDriverModelName="Unknown Model"
+	End if
+	gsValue=sDriverModelName
+	Call Job_WriteLog("Custom_DriverGetModelName","Ended. OSD Model Name Found '" & sDriverModelName & "'",True,True)
+	If CUSTOM_DEBUG Then wScript.Echo sFunction + " Slutter (" + gsValue + ")"
+	Custom_DriverGetModelName=bStatus
+End Function
+
+
+Function Custom_Check_ModelName()
+  Dim bStatus, sFunction, sNextLine
+  Set oLocalFSO = CreateObject("Scripting.FileSystemObject")
+
+  bStatus=True
+  sFunction="Custom_Check_ModelName"
+    If Instr(UCAse(gsImageName),"10") > 0 Then sOsSystem="WINDOWS 10"
+    If Instr(UCAse(gsImageName),"8") > 0 Then sOsSystem="WINDOWS 8"
+    If Instr(UCAse(gsImageName),"7") > 0 Then sOsSystem="WINDOWS 7"
+  If Instr(UCAse(gsImageName),"VISTA") > 0 Then sOsSystem="VISTA"
+  If Instr(UCAse(gsImageName),"XP") > 0 Then sOsSystem="XP"
+  If Instr(UCAse(gsImageName),"2000") > 0 Then sOsSystem="2000"
+  'Checking for DriverMappings.ini existence'
+  If bStatus Then bStatus=Job_Writelog(sFunction,"Checking for 'Drivermappings.ini' at " & gsDriverMappingsFile,bStatus,false)
+  If bStatus Then bStatus=File_ExistFile(gsDriverMappingsFile,False)
+  If gbValue=True Then
+  	If CUSTOM_DEBUG Then wscript.echo "Fandt Ini-Fil: " & gsDriverMappingsFile
+
+  	Dim objTextStream
+  	Set objTextStream = oLocalFSO.OpenTextFile(gsDriverMappingsFile,ForReading)
+
+  	IF CUSTOM_DEBUG Then wscript.echo "DEBUG: DriverMappings.ini FOUND"
+  	Do Until objTextStream.AtEndOfStream
+  		sNextLine = UCAse(objTextStream.Readline)
+  		If Instr(UCAse(sNextLine),UCAse("[")) Then
+  			sNextLine=Replace(sNextLine,"[","")
+  			sNextLine=Replace(sNextLine,"]","")
+  			sNextLine=Replace(sNextLine,"*","")
+  			If Instr(UCAse(gsModelName),UCAse(sNextLine)) > 0 Then
+  				bModelNameFound=True
+  			End If
+  		Else
+  			'No Action, Not Section'
+  		End If
+  	Loop
+  	If bModelNameFound Then
+  		If CUSTOM_DEBUG then Call Msgbox("Modelname " & """" & gsModelName & """" & " FOUND IN " & """" & gsDriverMappingsFile & """")
+  	Else
+  		Call Custom_Msgbox("Drivers for '" & gsModelName & "' not found in '" & gsDriverMappingsFile & "'." & vbNewLine & vbNewLine & "Click 'OK' to continue the installation.","Installation Information",vbOKOnly + vbInformation)
+  		bStatus=False
+  	End If
+  	objTextStream.Close
+  Else
+  	IF CUSTOM_DEBUG Then wscript.echo "The File '" & gsDriverMappingsFile & "' Not Found, click 'OK' to continue with default drivers only."
+  	bStatus=False
+  End If
+  Custom_Check_ModelName=bStatus
+End Function
+
+
+Function Custom_CopyLogs()
+  Dim bStatus, sFunction, sOsSystem
+  'Begin
+  	bStatus=True
+  sFunction="Custom_CopyLogs"
+  Call File_DelTree(gsLogServerFolder & "\" & gsNewComputerName,True)
+  Call File_CreateDirectory(gsLogServerFolder & "\" & gsNewComputerName)
+  sFolder="x:\Program Files\Capainstaller\Client\Logs\Advanced"
+  If bStatus Then bStatus=File_ExistDir(sFolder,False)
+  If bStatus Then Call File_CopyTree(sFolder,gsLogServerFolder & "\" & gsNewComputerName & "\Advanced",True)
+  sFolder="x:\Logs"
+  If bStatus Then bStatus=File_ExistDir(sFolder,False)
+  If bStatus Then Call File_CopyTree(sFolder,gsLogServerFolder & "\" & gsNewComputerName & "\Logs",True)
+    If gsSysprepType="XML" Then
+    Else
+        If bStatus Then bStatus=File_ExistFile(gsUnattendFile,False)
+        If bStatus And gbValue Then
+            sLogFileName="SYSPREP.INF"
+            If bStatus Then bStatus=File_CopyFile(gsUnattendFile,gsLogServerFolder & "\" & gsNewComputerName & "\" & sLogFileName,True)
+            If bstatus Then
+                If bStatus Then bStatus=Ini_WriteEntry(gsLogServerFolder & "\" & gsNewComputerName & "\" & sLogFileName,"GUIUnattended","AdminPassword","<Removed by prebootscript>")
+                If bStatus Then bStatus=Ini_WriteEntry(gsLogServerFolder & "\" & gsNewComputerName & "\" & sLogFileName,"UserData","ProductID","<Removed by prebootscript>")
+                If bStatus Then bStatus=Ini_WriteEntry(gsLogServerFolder & "\" & gsNewComputerName & "\" & sLogFileName,"Identification","DomainAdminPassword","<Removed by prebootscript>")
+            End If
+        End If
+    End If
+    Custom_CopyLogs=bStatus
+End Function
+
+
+
+Function Custom_RemoveComputerFromStaticGroup(sUnitName,sGroupName)
+  On Error Resume Next
+  bStatus=true
+  If bStatus Then bStatus=CMS_RemoveComputerFromStaticGroup(sUnitName, sGroupName)
+  If bStatus Then bStatus=CDM_RemoveComputerFromStaticGroup(sUnitName, sGroupName)
+  Custom_RemoveComputerFromStaticGroup=bStatus
+End function
+
+Function Custom_AddUnittoGroup(sUnitName,sGroupName)
+  On Error Resume Next
+  bStatus=true
+  If bStatus Then bStatus=CDM_AddComputerToStaticGroup(sUnitName, sGroupName)
+  If bStatus Then bStatus=CMS_AddComputerToStaticGroup(sUnitName, sGroupName)
+  Custom_AddUnittoGroup=bStatus
+End Function
+
+
+
+'Test'
+Function showDiskPart()
+  ' Run diskpart
+  set objShell = WScript.CreateObject("WScript.Shell")
+  set objExec = objShell.Exec("diskpart.exe")
+  sOutput = ""
+  ' Rescan the disks
+  strOutput = ExecuteDiskPartCommand("rescan", objExec)
+  '        WScript.echo strOutput
+  ' Select the first disk
+  strOutput = ExecuteDiskPartCommand("list disk", objExec)
+
+  arrayLines = Split(strOutput, vbcrlf)
+  for i = LBound(arrayLines) to UBound(arrayLines)
+      If i > 1 Then
+          if arrayLines(i) = "" Then Exit For
+          sOutput = sOutput + arrayLines(i) + vbCrlf
+  '                sDisk = Trim(Mid(arrayLines(i), 2, 8))
+  '                sStat = Trim(Mid(arrayLines(i), 12, 13))
+  '                sSize = Trim(Mid(arrayLines(i), 27, 7))
+  '                sFree = Trim(Mid(arrayLines(i), 36, 7))
+
+  '                WScript.Echo "Disk.. : " + sDisk
+  '                WScript.Echo "Status : " + sStat
+  '                WScript.Echo "Size.. : " + sSize
+  '                WScript.Echo "Free.. : " + sFree
+  '                WScript.Echo
+      End If
+  next
+  ' WScript.Echo sOutput
+  ' We can close diskpart
+  objExec.StdIn.Write "exit" & VbCrLf
+End Function
+
+
+Function ExecuteDiskPartCommand (strCommand, oExec)
+  ' Run the command we want
+  oExec.StdIn.Write strCommand & VbCrLf
+  ' If we read the output now, we will get the one from previous command (?). As we will always
+  ' run a dummy command after every valid command, we can safely ignore this
+  Do While True
+  IgnoreThis = oExec.StdOut.ReadLine & vbcrlf
+  ' Command finishes when diskpart prompt is shown again
+  If InStr(IgnoreThis, "DISKPART>") <> 0 Then Exit Do
+  Loop
+  ' Run a dummy command, so the next time we call this function and try to read output,
+  ' we can safely ignore the result
+  oExec.StdIn.Write VbCrLf
+  ' Read command's output
+  ExecuteDiskPartCommand = ""
+  Do While True
+  ExecuteDiskPartCommand = ExecuteDiskPartCommand & oExec.StdOut.ReadLine & vbcrlf
+  ' Command finishes when diskpart prompt is shown again
+  If InStr(ExecuteDiskPartCommand, "DISKPART>") <> 0 Then Exit Do
+  Loop
+End Function
