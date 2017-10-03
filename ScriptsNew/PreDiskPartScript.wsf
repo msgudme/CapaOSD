@@ -104,6 +104,7 @@ End Function
 	If bStatus Then bStatus=IncludeLibrary("capalib.cin") 'legacy boot - OSDGUI
 	If bStatus Then bStatus=IncludeLibrary("osdlib.cin") 'legacy boot - OSDGUI
 	If bStatus Then bStatus=IncludeScript("OSDCustomlib.cis")
+	If bStatus Then bStatus=Job_SetPlatform("CDM")
 	If bStatus Then bStatus=Job_Start("WS","PreDiskPart Script","v1.0","PreDiskPartScript.Log","INSTALL")
 	If bStatus Then bStatus=OSD_Initialize()
 	If bStatus Then bStatus=Reg_SetString("HKLM","Software\CapaSystems\CapaInstaller","PackageRoot","s:") 'fix library legacy boot

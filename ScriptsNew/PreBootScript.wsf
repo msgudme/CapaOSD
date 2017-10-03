@@ -133,6 +133,7 @@ End Function
 	If bStatus Then bStatus=IncludeLibrary("capalib.cin")
 	If bStatus Then bStatus=IncludeLibrary("osdlib.cin")
 	If bStatus Then bStatus=IncludeScript("OSDCustomlib.cis")
+	If bStatus Then bStatus=Job_SetPlatform("CDM")
   If bStatus Then bStatus=Job_Start("WS","PreBootScript","v1.0","PreBootScript.Log","INSTALL")
   If bStatus Then bStatus=OSD_Initialize()
   If bStatus Then bStatus=Custom()
